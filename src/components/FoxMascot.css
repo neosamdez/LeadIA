@@ -1,0 +1,33 @@
+.fox-mascot {
+  position: fixed; right: 22px; bottom: 22px; z-index: 90;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+  pointer-events: none;
+}
+.fox-bubble {
+  max-width: 260px; padding: 10px 14px; border-radius: 14px 14px 4px 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02)), var(--surf);
+  border: 1px solid var(--line-strong); color: var(--ink);
+  font-size: 13px; line-height: 1.4; box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  animation: fox-pop .25s ease-out;
+  pointer-events: auto;
+}
+.fox-bubble strong { color: #FF8A84; }
+.fox-btn {
+  width: 72px; height: 72px; border: 0; background: transparent; padding: 0; cursor: pointer;
+  pointer-events: auto; filter: drop-shadow(0 10px 20px rgba(0,0,0,.35));
+  transition: transform .2s ease;
+}
+.fox-btn:hover { transform: scale(1.06) rotate(-2deg); }
+.fox-btn:active { transform: scale(.96); }
+.fox-float { animation: fox-float 3.2s ease-in-out infinite; }
+.fox-wave .fox-tail { transform-origin: 60px 52px; animation: fox-tail .5s ease-in-out 2; }
+.fox-wave .fox-paw { transform-origin: 24px 52px; animation: fox-paw .4s ease-in-out 2; }
+.fox-blink .fox-eye { animation: fox-blink .18s ease-in-out 1; transform-origin: center; }
+.fox-sparkle { position: absolute; right: 8px; bottom: 62px; font-size: 18px; animation: fox-sparkle .9s ease-out forwards; pointer-events: none; }
+@keyframes fox-float { 0%,100%{ transform: translateY(0)} 50%{ transform: translateY(-5px)} }
+@keyframes fox-pop { from{ opacity:0; transform: translateY(6px) scale(.96)} to{ opacity:1; transform: translateY(0) scale(1)} }
+@keyframes fox-tail { 0%,100%{ transform: rotate(0)} 25%{ transform: rotate(12deg)} 75%{ transform: rotate(-10deg)} }
+@keyframes fox-paw { 0%,100%{ transform: rotate(0)} 50%{ transform: rotate(-18deg)} }
+@keyframes fox-blink { 0%,100%{ transform: scaleY(1)} 50%{ transform: scaleY(.1)} }
+@keyframes fox-sparkle { 0%{ opacity:0; transform: translateY(0) scale(.5)} 30%{ opacity:1; transform: translateY(-10px) scale(1)} 100%{ opacity:0; transform: translateY(-28px) scale(1.1)} }
+@media (max-width: 700px){ .fox-mascot{ right: 12px; bottom: 12px; } .fox-btn{ width: 60px; height: 60px; } .fox-bubble{ max-width: 210px; font-size: 12px; } }
