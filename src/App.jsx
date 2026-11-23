@@ -11,7 +11,6 @@ import Kanban from './pages/Kanban';
 import Alertas from './pages/Alertas';
 import Arquitetura from './pages/Arquitetura';
 import Settings from './pages/Settings';
-import FoxMascot from './components/FoxMascot';
 
 function Protected({ children }) {
   const { user } = useApp();
@@ -29,7 +28,6 @@ export default function App() {
   return (
     <AppProvider>
       <BrowserRouter basename={import.meta.env.BASE_URL}>
-        <FoxMascot />
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />

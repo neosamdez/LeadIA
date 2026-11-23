@@ -14,6 +14,16 @@ function loadState() {
   }
 }
 
+function mergeState(loaded) {
+  if (!loaded) return defaultState;
+  return {
+    ...defaultState,
+    ...loaded,
+    settings: { ...defaultState.settings, ...(loaded.settings || {}) },
+    tour: { ...defaultState.tour, ...(loaded.tour || {}) },
+  };
+}
+
 const defaultState = {
   user: null,
   leads: seedLeads,
@@ -24,12 +34,15 @@ const defaultState = {
     tone: 'Profissional e amigável',
     autoReply: true,
     followUp: true,
+    nvidiaApiKey: '',
+    nvidiaModel: import.meta.env.VITE_NVIDIA_MODEL || 'meta/llama-3.1-70b-instruct',
+    useNvidiaApi: true,
   },
   tour: { active: false, step: 0 },
 };
 
 export function AppProvider({ children }) {
-  const [state, setState] = useState(() => ({ ...defaultState, ...loadState() }));
+  const [state, setState] = useState(() => mergeState(loadState()));
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));

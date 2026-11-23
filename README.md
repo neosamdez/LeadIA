@@ -17,11 +17,10 @@ Landing page + painel demo funcional para apresentar a proposta de uma plataform
   - **Central de Alertas**: leads quentes, propostas pendentes, objeções detectadas e perdas sem motivo
   - **Arquitetura & LGPD**: fluxo técnico, segurança, APIs oficiais da Meta e conformidade
   - **Detalhe do lead**: drawer com score de conversão, tags, próxima ação sugerida, motivo de perda e timeline
-  - **Conversas com IA mais realista**: sugestões contextuais, detecção de objeção, typing indicator e handoff humano
+  - **Conversas com IA (NVIDIA NIM)**: gera respostas em tempo real via API NVIDIA (OpenAI-compatible), com fallback para sugestões simuladas, detecção de objeção, typing indicator e handoff humano
   - **Cenários prontos** para apresentação (novo lead, objeção de preço, conversão)
   - **Tour guiado** pelo painel
   - **Resumo executivo** em modal (demo) e seção na landing
-  - **Mascote interativa (Raposa 3D)**: personagem com profundidade/tilt 3D, sombra dinâmica, animações suaves, movimento autônomo entre botões, arrastável e reativa por aba/clique
   - Gestão de leads (filtro, status, criação)
   - Configurações da empresa/IA
   - Persistência local via `localStorage`

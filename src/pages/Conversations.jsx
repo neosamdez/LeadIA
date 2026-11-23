@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Send, Bot, User, Sparkles, Lightbulb, UserCheck } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Lightbulb, UserCheck, AlertCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { generateNvidiaReply, isNvidiaConfigured } from '../services/nvidia';
 
 function timeNow() {
   const d = new Date();
@@ -33,18 +34,20 @@ function getSuggestions(lastClientText = '') {
 }
 
 export default function Conversations() {
-  const { leads, conversations, sendMessage, updateLeadStatus } = useApp();
+  const { leads, conversations, sendMessage, updateLeadStatus, settings } = useApp();
   const { leadId } = useParams();
   const navigate = useNavigate();
   const [selected, setSelected] = useState(leadId || leads[0]?.id);
   const [draft, setDraft] = useState('');
   const [typing, setTyping] = useState(false);
+  const [aiError, setAiError] = useState('');
   const endRef = useRef(null);
   const typingTimer = useRef();
+  const abortRef = useRef();
 
   useEffect(() => { if (leadId) setSelected(leadId); }, [leadId]);
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [selected, conversations, typing]);
-  useEffect(() => () => clearTimeout(typingTimer.current), []);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [selected, conversations, typing, aiError]);
+  useEffect(() => () => { clearTimeout(typingTimer.current); abortRef.current?.abort(); }, []);
 
   const lead = useMemo(() => leads.find(l => l.id === selected) || leads[0], [leads, selected]);
   const msgs = conversations[lead?.id] || [];
@@ -60,16 +63,44 @@ export default function Conversations() {
     if (!textOverride) setDraft('');
   }
 
-  function sendAI(textOverride) {
+  async function sendAI(textOverride) {
     if (!lead || typing) return;
-    const text = (textOverride || suggestions[0]).trim();
+    setAiError('');
+    const fallback = (textOverride || suggestions[0] || '').trim();
+    const useApi = !textOverride && isNvidiaConfigured(settings);
+
+    if (!useApi) {
+      const text = fallback;
+      if (!text) return;
+      setTyping(true);
+      clearTimeout(typingTimer.current);
+      typingTimer.current = setTimeout(() => {
+        sendMessage(lead.id, { from: 'ia', text, time: timeNow() });
+        if (lead.status === 'Novo') updateLeadStatus(lead.id, 'Em atendimento');
+        setTyping(false);
+      }, 700);
+      return;
+    }
+
     setTyping(true);
-    clearTimeout(typingTimer.current);
-    typingTimer.current = setTimeout(() => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    try {
+      const text = await generateNvidiaReply({
+        lead,
+        conversations: conversations[lead.id] || [],
+        settings,
+        signal: controller.signal,
+      });
       sendMessage(lead.id, { from: 'ia', text, time: timeNow() });
       if (lead.status === 'Novo') updateLeadStatus(lead.id, 'Em atendimento');
-      setTyping(false);
-    }, 900);
+    } catch (err) {
+      if (err?.name === 'AbortError') return;
+      setAiError(err?.message || 'Falha ao gerar resposta com NVIDIA.');
+    } finally {
+      if (!controller.signal.aborted) setTyping(false);
+    }
   }
 
   function handoff() {
@@ -114,7 +145,7 @@ export default function Conversations() {
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <button className="btn btn-sm btn-outline" onClick={handoff}><UserCheck size={14} /> Handoff humano</button>
-                  <button className="btn btn-sm btn-outline" onClick={() => sendAI()}><Sparkles size={14} /> Simular resposta IA</button>
+                  <button className="btn btn-sm btn-outline" onClick={() => sendAI()} disabled={typing}><Sparkles size={14} /> {isNvidiaConfigured(settings) ? 'Gerar resposta IA (NVIDIA)' : 'Simular resposta IA'}</button>
                 </div>
               </div>
 
@@ -142,7 +173,14 @@ export default function Conversations() {
                 {typing && (
                   <div style={{ alignSelf: 'flex-end', maxWidth: '78%' }}>
                     <div style={{ padding: '10px 13px', borderRadius: 16, borderBottomRightRadius: 4, background: 'var(--wa-bg)', color: 'var(--mute)', fontSize: 14 }}>
-                      <Bot size={12} style={{ marginRight: 6 }} /> LeadIA está digitando...
+                      <Bot size={12} style={{ marginRight: 6 }} /> {isNvidiaConfigured(settings) ? 'LeadIA (NVIDIA) está gerando resposta...' : 'LeadIA está digitando...'}
+                    </div>
+                  </div>
+                )}
+                {aiError && (
+                  <div style={{ alignSelf: 'flex-end', maxWidth: '78%' }}>
+                    <div style={{ padding: '10px 13px', borderRadius: 12, background: 'rgba(255,90,82,.12)', color: '#FFB4AF', fontSize: 13, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                      <AlertCircle size={14} style={{ marginTop: 2, flexShrink: 0 }} /> <span>{aiError}</span>
                     </div>
                   </div>
                 )}
