@@ -1,0 +1,50 @@
+import { useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { X, ArrowRight, Compass } from 'lucide-react';
+import { useApp } from '../context/AppContext';
+
+const steps = [
+  { path: '/app', title: 'Dashboard', text: 'Veja métricas-chave: leads recebidos, taxa de conversão e receita simulada.' },
+  { path: '/app/leads', title: 'Leads', text: 'Gerencie leads, filtre por status, crie novos contatos e acompanhe oportunidades.' },
+  { path: '/app/conversas', title: 'Conversas', text: 'Acompanhe o histórico e simule respostas da IA para demonstrar o atendimento comercial.' },
+  { path: '/app/configuracoes', title: 'Configurações', text: 'Ajuste o tom da IA, regras de follow-up e resete a demonstração quando necessário.' },
+];
+
+export default function Tour() {
+  const { tour, nextTour, endTour } = useApp();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!tour.active) return;
+    const step = steps[tour.step];
+    if (step && location.pathname !== step.path) navigate(step.path);
+  }, [tour.active, tour.step]);
+
+  if (!tour.active) return null;
+  const step = steps[tour.step];
+  if (!step) {
+    return (
+      <div style={{ position: 'fixed', right: 20, bottom: 20, width: 340, maxWidth: 'calc(100vw - 40px)', background: '#13222C', color: '#fff', borderRadius: 16, padding: 20, boxShadow: '0 20px 50px rgba(0,0,0,.25)', zIndex: 100 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, marginBottom: 8 }}><Compass size={18} color="#FF6A5E" /> Tour concluído</div>
+        <p style={{ margin: '0 0 14px', color: '#B8C9C2', fontSize: 14 }}>Você percorreu o fluxo principal da LeadIA. Agora você pode usar os cenários prontos no Dashboard para demonstrar ao vivo.</p>
+        <button className="btn btn-primary btn-sm" onClick={endTour}>Fechar</button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ position: 'fixed', right: 20, bottom: 20, width: 360, maxWidth: 'calc(100vw - 40px)', background: '#13222C', color: '#fff', borderRadius: 16, padding: 20, boxShadow: '0 20px 50px rgba(0,0,0,.25)', zIndex: 100 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
+        <div style={{ fontSize: 12, color: '#9DB0A8', fontWeight: 600 }}>TOUR GUIADO · {tour.step + 1}/{steps.length}</div>
+        <button onClick={endTour} style={{ background: 'transparent', border: 0, color: '#9DB0A8', cursor: 'pointer' }} aria-label="Fechar tour"><X size={16} /></button>
+      </div>
+      <div style={{ fontSize: 20, fontWeight: 800, margin: '6px 0 6px' }}>{step.title}</div>
+      <p style={{ margin: '0 0 16px', color: '#B8C9C2', fontSize: 14, lineHeight: 1.5 }}>{step.text}</p>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button className="btn btn-primary btn-sm" onClick={nextTour}>{tour.step === steps.length - 1 ? 'Concluir' : 'Próximo'} <ArrowRight size={14} /></button>
+        <button className="btn btn-ghost btn-sm" onClick={endTour} style={{ color: '#B8C9C2' }}>Pular</button>
+      </div>
+    </div>
+  );
+}

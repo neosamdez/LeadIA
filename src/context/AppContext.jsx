@@ -25,6 +25,7 @@ const defaultState = {
     autoReply: true,
     followUp: true,
   },
+  tour: { active: false, step: 0 },
 };
 
 export function AppProvider({ children }) {
@@ -55,6 +56,41 @@ export function AppProvider({ children }) {
     }),
     updateSettings: (patch) => setState((s) => ({ ...s, settings: { ...s.settings, ...patch } })),
     resetDemo: () => setState(defaultState),
+    startTour: () => setState((s) => ({ ...s, tour: { active: true, step: 0 } })),
+    nextTour: () => setState((s) => ({ ...s, tour: { ...s.tour, step: s.tour.step + 1 } })),
+    endTour: () => setState((s) => ({ ...s, tour: { active: false, step: 0 } })),
+    simulateScenario: (type) => setState((s) => {
+      const now = new Date();
+      const time = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      const id = 'sim' + Date.now();
+      if (type === 'novo_lead') {
+        const lead = { id, name: 'Fernanda Alves', channel: 'Instagram', interest: 'Pacote Fernando de Noronha', status: 'Novo', value: 6200, lastMessage: 'Oi! Vi o pacote para Noronha. Tem datas para julho?', time, avatar: 'FA' };
+        const conv = [
+          { from: 'client', text: 'Oi! Vi o pacote para Noronha. Tem datas para julho?', time },
+          { from: 'ia', text: 'Olá, Fernanda! Temos sim disponibilidade em julho. Você pretende viajar sozinha ou acompanhada?', time },
+        ];
+        return { ...s, leads: [lead, ...s.leads], conversations: { ...s.conversations, [id]: conv } };
+      }
+      if (type === 'objecao') {
+        const target = s.leads.find(l => l.status !== 'Convertido' && l.status !== 'Perdido') || s.leads[0];
+        if (!target) return s;
+        const conv = [...(s.conversations[target.id] || []),
+          { from: 'client', text: 'Achei o valor um pouco alto. Tem desconto ou condição melhor?', time },
+          { from: 'ia', text: 'Entendo sua preocupação! Posso parcelar em até 10x sem juros ou oferecer um bônus de traslado. Qual opção faz mais sentido para você?', time },
+        ];
+        return { ...s, conversations: { ...s.conversations, [target.id]: conv }, leads: s.leads.map(l => l.id === target.id ? { ...l, status: 'Qualificado', lastMessage: 'Achei o valor um pouco alto...', time } : l) };
+      }
+      if (type === 'conversao') {
+        const target = s.leads.find(l => !['Convertido', 'Perdido'].includes(l.status)) || s.leads[0];
+        if (!target) return s;
+        const conv = [...(s.conversations[target.id] || []),
+          { from: 'client', text: 'Perfeito, quero fechar! Pode me enviar o link de pagamento?', time },
+          { from: 'ia', text: 'Ótimo! Enviei o link de pagamento e registrei sua proposta como fechada. Bem-vindo(a)!', time },
+        ];
+        return { ...s, conversations: { ...s.conversations, [target.id]: conv }, leads: s.leads.map(l => l.id === target.id ? { ...l, status: 'Convertido', lastMessage: 'Perfeito, quero fechar!', time } : l) };
+      }
+      return s;
+    }),
   }), [state]);
 
   return <AppContext.Provider value={api}>{children}</AppContext.Provider>;

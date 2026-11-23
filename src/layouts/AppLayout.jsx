@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Users, MessageSquare, Settings, LogOut, Bot } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import Tour from '../components/Tour';
 import './AppLayout.css';
 
 const nav = [
@@ -43,6 +44,7 @@ export default function AppLayout() {
       <main className="app-main">
         <Outlet />
       </main>
+      <Tour />
     </div>
   );
 }

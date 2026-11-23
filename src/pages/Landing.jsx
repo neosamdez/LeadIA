@@ -194,6 +194,21 @@ export default function Landing() {
 
       <section className="section">
         <div className="container">
+          <h2 className="section-title">Resumo executivo em 1 minuto</h2>
+          <p className="section-lead">Uma visão rápida para apresentar o LeadIA na banca.</p>
+          <div className="l-seg" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+            <div><b>Problema</b><p>PMEs perdem vendas por demora no atendimento e falta de follow-up.</p></div>
+            <div><b>Solução</b><p>IA que atende, qualifica, faz follow-up e centraliza leads em um painel.</p></div>
+            <div><b>Público</b><p>Negócios que vendem por Instagram/WhatsApp e precisam responder rápido.</p></div>
+            <div><b>Diferencial</b><p>Não é só chatbot: é um departamento comercial com objetivo de conversão.</p></div>
+            <div><b>Modelo</b><p>Assinatura mensal com planos Start, Pro, Business e Enterprise.</p></div>
+            <div><b>Roadmap</b><p>Demo forte → MVP técnico com backend → piloto com integrações oficiais.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="container">
           <h2 className="section-title">Perguntas frequentes</h2>
           <div className="l-faq">
             <details><summary>A LeadIA substitui o vendedor?</summary><p>Não. Ela cuida do atendimento inicial, qualificação e follow-up. Conversas complexas ou de alto valor podem ser encaminhadas para um vendedor humano.</p></details>

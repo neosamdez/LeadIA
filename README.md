@@ -11,7 +11,10 @@ Landing page + painel demo funcional para apresentar a proposta de uma plataform
 
 - **Landing page**: proposta de valor, problema, como funciona, segmentos, planos, MVP e FAQ.
 - **Painel demo (funcional no front-end)**:
-  - Dashboard com métricas simuladas
+  - Dashboard com métricas simuladas e **funil comercial**
+  - **Cenários prontos** para apresentação (novo lead, objeção de preço, conversão)
+  - **Tour guiado** pelo painel (Dashboard → Leads → Conversas → Configurações)
+  - **Resumo executivo** em modal (demo) e seção na landing
   - Gestão de leads (filtro, status, criação)
   - Conversas com histórico e envio de mensagens
   - Simulação de resposta da IA
@@ -55,23 +58,24 @@ src/
 
 ## Roteiro sugerido para apresentação
 
-1. Mostrar a **landing page** e o problema que o LeadIA resolve.
+1. Mostrar a **landing page**, o problema e a seção **Resumo executivo em 1 minuto**.
 2. Clicar em **Acessar demo** e entrar no painel.
-3. No **Dashboard**, destacar métricas de atendimento e conversão.
-4. Em **Leads**, filtrar, alterar status e criar um lead ao vivo.
-5. Em **Conversas**, abrir um lead e usar **Simular resposta IA** para mostrar o fluxo comercial.
-6. Em **Configurações**, ajustar tom da IA/follow-up e mostrar o reset da demo.
+3. No **Dashboard**, clicar em **Iniciar tour** para guiar a banca pelo fluxo.
+4. Usar os **Cenários prontos** (novo lead, objeção, conversão) para demonstrar ao vivo.
+5. Mostrar o **Funil comercial** e as métricas de conversão/receita.
+6. Em **Leads/Conversas**, ajustar status e usar **Simular resposta IA**.
 7. Fechar com diferenciais, modelo de negócio, LGPD e próximos passos.
 
 ## Como melhorar ainda mais para apresentar o app
 
 ### 1. Melhorias rápidas para a apresentação (alto impacto)
 
-- **Modo apresentação guiado**: botão “Iniciar tour” com passos destacando Dashboard → Leads → Conversas → Configurações.
-- **Dados demo mais ricos**: adicionar mais leads, canais, etiquetas, motivos de perda e histórico temporal para os gráficos ficarem mais convincentes.
-- **Cenários prontos**: botões como “Simular novo lead do Instagram”, “Simular objeção de preço” e “Simular conversão” para demonstrar ao vivo sem digitar muito.
-- **Tela de resumo executivo**: slide/página com problema, solução, mercado, diferencial, modelo de negócio e roadmap em 1 minuto.
-- **Capturas/GIFs no README**: incluir imagens do fluxo principal para quem abrir o repositório antes da apresentação.
+- [x] **Modo apresentação guiado**: botão “Iniciar tour” com passos destacando Dashboard → Leads → Conversas → Configurações.
+- [x] **Cenários prontos**: botões “Simular novo lead do Instagram”, “Simular objeção de preço” e “Simular conversão”.
+- [x] **Funil visual**: funil comercial no Dashboard (Novo → Qualificado → Proposta → Convertido).
+- [x] **Resumo executivo**: seção na landing e modal no painel com problema, solução, público, diferencial, modelo e roadmap.
+- [ ] **Dados demo mais ricos**: adicionar mais leads, canais, etiquetas, motivos de perda e histórico temporal para gráficos mais convincentes.
+- [ ] **Capturas/GIFs no README**: incluir imagens do fluxo principal para quem abrir o repositório antes da apresentação.
 
 ### 2. Melhorias de produto (experiência do usuário)
 
