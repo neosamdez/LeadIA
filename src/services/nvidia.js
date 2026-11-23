@@ -37,7 +37,7 @@ function toChatMessages(conversations, lead, settings) {
   return [{ role: 'system', content: buildSystemPrompt(lead, settings) }, ...history];
 }
 
-export async function generateNvidiaReply({ lead, conversations, settings, signal }) {
+async function callNvidia(messages, settings, signal, maxTokens = 220) {
   const apiKey = getNvidiaApiKey(settings);
   const model = getNvidiaModel(settings);
   if (!apiKey) throw new Error('Chave da API NVIDIA não configurada.');
@@ -52,10 +52,10 @@ export async function generateNvidiaReply({ lead, conversations, settings, signa
       },
       body: JSON.stringify({
         model,
-        messages: toChatMessages(conversations, lead, settings),
-        temperature: 0.7,
-        top_p: 0.9,
-        max_tokens: 220,
+        messages,
+        temperature: 0.8,
+        top_p: 0.95,
+        max_tokens: maxTokens,
         chat_template_kwargs: { enable_thinking: false },
       }),
       signal,
@@ -74,5 +74,25 @@ export async function generateNvidiaReply({ lead, conversations, settings, signa
   const data = await res.json();
   const text = data?.choices?.[0]?.message?.content?.trim();
   if (!text) throw new Error('Resposta vazia da API NVIDIA.');
-  return text;
+  return text.replace(/^["']|["']$/g, '').trim();
+}
+
+export async function generateNvidiaReply({ lead, conversations, settings, signal }) {
+  return callNvidia(toChatMessages(conversations, lead, settings), settings, signal, 220);
+}
+
+export async function generateNvidiaClientMessage({ lead, conversations, settings, signal, goal }) {
+  const history = (conversations || []).slice(-10).map(m => ({
+    role: m.from === 'client' ? 'assistant' : 'user',
+    content: m.text,
+  }));
+  const system = [
+    `Você está simulando um CLIENTE real em uma conversa de vendas por ${lead?.channel || 'WhatsApp'}.`,
+    `Persona: ${lead?.name || 'Cliente'}, interessado em "${lead?.interest || 'produto/serviço'}".`,
+    `Contexto: valor estimado R$ ${lead?.value ?? 'N/A'}, status atual ${lead?.status || 'Novo'}.`,
+    `Objetivo desta mensagem: ${goal || 'responder naturalmente e avançar na negociação'}.`,
+    `Regras: escreva em português do Brasil, tom natural de WhatsApp/Instagram (curto, humano, pode ter pequenas variações), sem ser robótico.`,
+    `Não use prefixos como "Cliente:". Não faça papel de vendedor. Apenas a mensagem do cliente.`,
+  ].join(' ');
+  return callNvidia([{ role: 'system', content: system }, ...history], settings, signal, 120);
 }

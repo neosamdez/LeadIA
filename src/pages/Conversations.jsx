@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Send, Bot, User, Sparkles, Lightbulb, UserCheck, AlertCircle, Zap } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { generateNvidiaReply, isNvidiaConfigured } from '../services/nvidia';
+import { generateNvidiaReply, generateNvidiaClientMessage, isNvidiaConfigured } from '../services/nvidia';
 
 function timeNow() {
   const d = new Date();
@@ -108,40 +108,44 @@ export default function Conversations() {
     if (!lead || typing || simulating) return;
     setAiError('');
     setSimulating(true);
-    const scenarios = [
-      {
-        steps: [
-          { client: 'Oi, vi o anúncio de vocês. Como funciona na prática?', status: 'Em atendimento' },
-          { client: 'Gostei. Qual o valor e tem período de teste?', status: 'Qualificado' },
-          { client: 'Faz sentido pra mim. Pode me enviar uma proposta?', status: 'Proposta' },
-        ],
-      },
-      {
-        steps: [
-          { client: 'Boa tarde! Estou comparando algumas opções no mercado.', status: 'Em atendimento' },
-          { client: 'Entendi a diferença. Vocês atendem empresas do meu porte?', status: 'Qualificado' },
-          { client: 'Perfeito, quero avançar. Qual o próximo passo?', status: 'Proposta' },
-        ],
-      },
-      {
-        steps: [
-          { client: 'Olá! Preciso resolver isso rápido na minha operação.', status: 'Em atendimento' },
-          { client: 'O valor está dentro do esperado. Tem contrato mensal?', status: 'Qualificado' },
-          { client: 'Ótimo, vamos fechar. Me manda o link por favor.', status: 'Convertido' },
-        ],
-      },
-    ];
-    const scenario = scenarios[Math.floor(Math.random() * scenarios.length)];
     const useApi = isNvidiaConfigured(settings);
     let conv = [...(conversations[lead.id] || [])];
     const delay = (ms) => new Promise(r => setTimeout(r, ms));
 
+    const goals = [
+      { status: 'Em atendimento', goal: `Fazer uma pergunta inicial natural sobre "${lead.interest}", demonstrando interesse real e contexto pessoal/profissional.` },
+      { status: 'Qualificado', goal: `Levantar uma objeção ou dúvida realista (preço, prazo, resultado, comparação) sobre "${lead.interest}" e pedir esclarecimento.` },
+      { status: lead.value >= 1000 ? 'Proposta' : 'Qualificado', goal: `Mostrar que entendeu a resposta, pedir condição comercial/próximo passo (proposta, demonstração, pagamento ou agendamento).` },
+      { status: ['Convertido', 'Proposta'].includes(lead.status) ? 'Convertido' : 'Proposta', goal: `Tomar uma decisão: ou concordar em avançar/fechar, ou pedir envio de proposta/link com confirmação clara.` },
+    ];
+
+    const fallbackClients = [
+      `Oi, vi sobre ${lead.interest} e queria entender melhor como funciona para o meu caso.`,
+      `Interessante. No meu caso, o que mais pesa é custo-benefício. Como vocês costumam trabalhar isso?`,
+      `Faz sentido. Se a gente avançar, qual seria o próximo passo e o prazo?`,
+      `Beleza, gostei da explicação. Pode me enviar uma proposta para eu avaliar?`,
+    ];
+
     try {
-      for (const step of scenario.steps) {
-        const clientMsg = { from: 'client', text: step.client, time: timeNow() };
+      for (let i = 0; i < goals.length; i++) {
+        const step = goals[i];
+        let clientText = fallbackClients[i] || fallbackClients[fallbackClients.length - 1];
+
+        if (useApi) {
+          try {
+            abortRef.current?.abort();
+            const controller = new AbortController();
+            abortRef.current = controller;
+            clientText = await generateNvidiaClientMessage({ lead, conversations: conv, settings, signal: controller.signal, goal: step.goal });
+          } catch (err) {
+            if (err?.name === 'AbortError') throw err;
+          }
+        }
+
+        const clientMsg = { from: 'client', text: clientText, time: timeNow() };
         sendMessage(lead.id, clientMsg);
         conv = [...conv, clientMsg];
-        await delay(500);
+        await delay(700);
 
         setTyping(true);
         let aiText;
@@ -153,19 +157,20 @@ export default function Conversations() {
             aiText = await generateNvidiaReply({ lead, conversations: conv, settings, signal: controller.signal });
           } else {
             await delay(700);
-            aiText = getSuggestions(step.client)[0];
+            aiText = getSuggestions(clientText)[0];
           }
         } catch (err) {
           if (err?.name === 'AbortError') throw err;
-          aiText = getSuggestions(step.client)[0];
+          aiText = getSuggestions(clientText)[0];
           setAiError(err?.message || 'Falha ao gerar resposta com NVIDIA.');
         }
+
         const aiMsg = { from: 'ia', text: aiText, time: timeNow() };
         sendMessage(lead.id, aiMsg);
         conv = [...conv, aiMsg];
         updateLeadStatus(lead.id, step.status);
         setTyping(false);
-        await delay(700);
+        await delay(800);
       }
     } catch (err) {
       if (err?.name !== 'AbortError') setAiError(err?.message || 'Falha na simulação.');
