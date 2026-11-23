@@ -108,7 +108,7 @@ export default function Dashboard() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr .8fr', gap: 16, marginBottom: 16 }}>
-        <div className="card" style={{ padding: 22 }}>
+        <div className="card" style={{ padding: 22, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
             <Target size={18} color="var(--acc)" />
             <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Funil comercial</h2>
@@ -128,8 +128,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gap: 16 }}>
-          <div className="card" style={{ padding: 22 }}>
+        <div style={{ display: 'grid', gap: 16, minWidth: 0 }}>
+          <div className="card" style={{ padding: 22, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <Building2 size={18} color="var(--acc)" />
               <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Demo por persona</h2>
@@ -140,12 +140,12 @@ export default function Dashboard() {
                 <button
                   key={p.id}
                   className={`btn btn-sm ${activePersonaId === p.id ? 'btn-primary' : 'btn-outline'}`}
-                  style={{ justifyContent: 'flex-start', textAlign: 'left', height: 'auto', padding: '10px 12px' }}
+                  style={{ justifyContent: 'flex-start', textAlign: 'left', height: 'auto', padding: '10px 12px', width: '100%', minWidth: 0, whiteSpace: 'normal' }}
                   onClick={() => applyPersona(p.id)}
                 >
-                  <div>
+                  <div style={{ minWidth: 0 }}>
                     <div style={{ fontWeight: 700 }}>{p.label}</div>
-                    <div style={{ fontSize: 12, opacity: .85, fontWeight: 400 }}>{p.description}</div>
+                    <div style={{ fontSize: 12, opacity: .85, fontWeight: 400, whiteSpace: 'normal', overflowWrap: 'anywhere' }}>{p.description}</div>
                   </div>
                 </button>
               ))}

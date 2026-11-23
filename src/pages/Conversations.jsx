@@ -252,23 +252,27 @@ export default function Conversations() {
         <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0, overflow: 'hidden' }}>
           {lead ? (
             <>
-              <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: 18, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>{lead.name} <span className={`badge ${intent.tone}`} style={{ fontSize: 11 }}><Brain size={11} style={{ marginRight: 4 }} />{intent.label}</span></div>
-                  <div style={{ fontSize: 13, color: 'var(--mute)' }}>{lead.channel} · {lead.interest} · <span className="badge blue">{lead.status}</span></div>
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 17, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>{lead.name} <span className={`badge ${intent.tone}`} style={{ fontSize: 11 }}><Brain size={11} style={{ marginRight: 4 }} />{intent.label}</span></div>
+                  <div style={{ fontSize: 12, color: 'var(--mute)', marginTop: 2 }}>{lead.channel} · {lead.interest} · <span className="badge blue">{lead.status}</span></div>
                 </div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <button className="btn btn-sm btn-outline" onClick={() => setShowTimeline(true)}><History size={14} /> Timeline</button>
-                  <button className="btn btn-sm btn-outline" onClick={copyLeadSummary}>{copied ? <CheckCircle2 size={14} /> : <Copy size={14} />} {copied ? 'Copiado' : 'Resumo'}</button>
-                  <button className="btn btn-sm btn-outline" onClick={() => setShowProposal(true)}><FileText size={14} /> Proposta</button>
-                  <button className="btn btn-sm btn-outline" onClick={() => { addFollowUp({ leadId: lead.id, title: `Follow-up: ${lead.name}`, note: `Retomar ${lead.interest}`, when: 'Amanhã' }); recordEvent(lead.id, { type: 'event', text: 'Follow-up agendado pelo consultor' }); }}><CalendarPlus size={14} /> Follow-up</button>
-                  <button className="btn btn-sm btn-outline" onClick={handoff}><UserCheck size={14} /> Handoff</button>
-                  <button className="btn btn-sm btn-outline" onClick={() => sendAI()} disabled={typing || simulating}><Sparkles size={14} /> {isNvidiaConfigured(settings) ? 'IA NVIDIA' : 'IA'}</button>
-                  <button className="btn btn-sm btn-primary" onClick={simulateNegotiation} disabled={typing || simulating}><Zap size={14} /> {simulating ? 'Simulando...' : 'Simular negociação'}</button>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  {[
+                    { label: 'Timeline', icon: History, onClick: () => setShowTimeline(true) },
+                    { label: copied ? 'Copiado' : 'Resumo', icon: copied ? CheckCircle2 : Copy, onClick: copyLeadSummary },
+                    { label: 'Proposta', icon: FileText, onClick: () => setShowProposal(true) },
+                    { label: 'Follow-up', icon: CalendarPlus, onClick: () => { addFollowUp({ leadId: lead.id, title: `Follow-up: ${lead.name}`, note: `Retomar ${lead.interest}`, when: 'Amanhã' }); recordEvent(lead.id, { type: 'event', text: 'Follow-up agendado pelo consultor' }); } },
+                    { label: 'Handoff', icon: UserCheck, onClick: handoff },
+                  ].map(({ label, icon: Icon, onClick }) => (
+                    <button key={label} className="btn btn-sm btn-outline" style={{ padding: '5px 9px', fontSize: 12 }} onClick={onClick}><Icon size={13} /> {label}</button>
+                  ))}
+                  <button className="btn btn-sm btn-outline" style={{ padding: '5px 9px', fontSize: 12 }} onClick={() => sendAI()} disabled={typing || simulating}><Sparkles size={13} /> IA</button>
+                  <button className="btn btn-sm btn-primary" style={{ padding: '5px 9px', fontSize: 12 }} onClick={simulateNegotiation} disabled={typing || simulating}><Zap size={13} /> {simulating ? 'Simulando...' : 'Simular'}</button>
                 </div>
               </div>
 
-              <div style={{ flex: 1, padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, background: 'var(--bg-alt)' }}>
+              <div style={{ flex: 1, padding: 16, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, background: 'var(--bg-alt)' }}>
                 {msgs.length === 0 && <div style={{ color: 'var(--mute)', fontSize: 14 }}>Nenhuma mensagem ainda. Envie a primeira mensagem.</div>}
                 {msgs.map((m, i) => {
                   const isClient = m.from === 'client';
@@ -306,36 +310,23 @@ export default function Conversations() {
                 <div ref={endRef} />
               </div>
 
-              <div style={{ padding: 14, borderTop: '1px solid var(--line)', display: 'grid', gap: 10 }}>
-                <div>
-                  <div style={{ fontSize: 12, color: 'var(--mute)', display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}><Sparkles size={13} /> Playbooks IA</div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {[
-                      ['qualificar', 'Qualificar'],
-                      ['objeção', 'Contornar objeção'],
-                      ['proposta', 'Enviar proposta'],
-                      ['agendar', 'Agendar'],
-                      ['recuperar', 'Recuperar lead'],
-                    ].map(([key, label]) => (
-                      <button key={key} className="btn btn-sm btn-outline" style={{ fontSize: 12 }} disabled={typing || simulating} onClick={() => sendAI(undefined, key)}>
-                        {label}
-                      </button>
-                    ))}
-                  </div>
+              <div style={{ padding: 12, borderTop: '1px solid var(--line)', display: 'grid', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <span style={{ fontSize: 11, color: 'var(--mute)', display: 'flex', gap: 4, alignItems: 'center', marginRight: 2 }}><Sparkles size={12} /> Playbooks:</span>
+                  {[['qualificar', 'Qualificar'], ['objeção', 'Objeção'], ['proposta', 'Proposta'], ['agendar', 'Agendar'], ['recuperar', 'Recuperar']].map(([key, label]) => (
+                    <button key={key} className="btn btn-sm btn-outline" style={{ fontSize: 11, padding: '4px 8px' }} disabled={typing || simulating} onClick={() => sendAI(undefined, key)}>{label}</button>
+                  ))}
                 </div>
-                <div>
-                  <div style={{ fontSize: 12, color: 'var(--mute)', display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}><Lightbulb size={13} /> Sugestões da IA</div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {suggestions.map((s, i) => (
-                      <button key={i} className="btn btn-sm btn-outline" style={{ whiteSpace: 'normal', textAlign: 'left', height: 'auto', padding: '8px 10px', fontSize: 12 }} onClick={() => sendAI(s)}>
-                        {s.length > 72 ? s.slice(0, 72) + '...' : s}
-                      </button>
-                    ))}
-                  </div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {suggestions.slice(0, 3).map((s, i) => (
+                    <button key={i} className="btn btn-sm btn-outline" style={{ whiteSpace: 'normal', textAlign: 'left', height: 'auto', padding: '6px 8px', fontSize: 11, flex: '1 1 180px' }} onClick={() => sendAI(s)}>
+                      {s.length > 60 ? s.slice(0, 60) + '...' : s}
+                    </button>
+                  ))}
                 </div>
-                <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ display: 'flex', gap: 8 }}>
                   <input value={draft} onChange={e => setDraft(e.target.value)} placeholder="Digite uma mensagem como consultor..." onKeyDown={e => { if (e.key === 'Enter') send('consultor'); }} />
-                  <button className="btn btn-primary" onClick={() => send('consultor')}><Send size={16} /> Enviar</button>
+                  <button className="btn btn-primary btn-sm" onClick={() => send('consultor')}><Send size={15} /> Enviar</button>
                 </div>
               </div>
             </>
@@ -391,7 +382,7 @@ export default function Conversations() {
         </div>
       )}
 
-      <style>{`@media (max-width: 900px){ .app-main .card[style*="grid-template-columns: 320px"]{grid-template-columns:1fr !important;grid-template-rows:auto minmax(0,1fr) !important;height:min(82vh,760px) !important;min-height:520px !important} .app-main .card[style*="grid-template-columns: 320px"] > div:first-child{max-height:220px;border-right:0 !important;border-bottom:1px solid var(--line)} }`}</style>
+      <style>{`@media (max-width: 900px){ .app-main .card[style*="grid-template-columns: 320px"]{grid-template-columns:1fr !important;grid-template-rows:auto minmax(0,1fr) !important;height:min(78vh,720px) !important;min-height:460px !important} .app-main .card[style*="grid-template-columns: 320px"] > div:first-child{max-height:160px;border-right:0 !important;border-bottom:1px solid var(--line)} .app-main .card[style*="grid-template-columns: 320px"] > div:last-child{min-height:0} } @media (max-width: 600px){ .app-main .card[style*="grid-template-columns: 320px"]{height:min(74vh,680px) !important;min-height:420px !important} .app-main .card[style*="grid-template-columns: 320px"] > div:first-child{max-height:140px} }`}</style>
     </div>
   );
 }
