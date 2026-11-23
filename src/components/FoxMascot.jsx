@@ -22,7 +22,16 @@ const clickMessages = [
   'Resposta rápida = mais conversão!',
   'Posso te ajudar a impressionar a banca? 😄',
   'Follow-up inteligente salva vendas perdidas.',
-  'Pode me arrastar pra onde quiser! 🦊',
+  'Zoom! Tô correndo pela tela! 🦊',
+  'Me pega se conseguir! 😄',
+];
+
+const playMessages = [
+  'Vou dar uma voltinha por aqui!',
+  'Correndo entre os botões! 🦊',
+  'Explorando o painel...',
+  'Opa, passando por aqui!',
+  'Brincando enquanto você apresenta!',
 ];
 
 function FoxSVG({ waving, blinking }) {
@@ -53,19 +62,20 @@ function FoxSVG({ waving, blinking }) {
       <circle cx="27" cy="34" r="2.2" fill="#FFB4A8" opacity="0.55" />
       <circle cx="49" cy="34" r="2.2" fill="#FFB4A8" opacity="0.55" />
       <g className="fox-paw"><ellipse cx="28" cy="60" rx="4.2" ry="3" fill="#FF8A4C" /><ellipse cx="28" cy="60" rx="2.4" ry="1.7" fill="#FFF3E8" /></g>
-      <ellipse cx="48" cy="60" rx="4.2" ry="3" fill="#FF8A4C" />
-      <ellipse cx="48" cy="60" rx="2.4" ry="1.7" fill="#FFF3E8" />
+      <g className="fox-paw-back"><ellipse cx="48" cy="60" rx="4.2" ry="3" fill="#FF8A4C" /><ellipse cx="48" cy="60" rx="2.4" ry="1.7" fill="#FFF3E8" /></g>
     </svg>
   );
 }
 
 const SIZE = 72;
-const MARGIN = 12;
+const MARGIN = 10;
 const POS_KEY = 'leadia-fox-pos';
 
 function clampPos(x, y) {
-  const maxX = Math.max(MARGIN, window.innerWidth - SIZE - MARGIN);
-  const maxY = Math.max(MARGIN, window.innerHeight - SIZE - MARGIN);
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const maxX = Math.max(MARGIN, w - SIZE - MARGIN);
+  const maxY = Math.max(MARGIN, h - SIZE - MARGIN);
   return { x: Math.min(maxX, Math.max(MARGIN, x)), y: Math.min(maxY, Math.max(MARGIN, y)) };
 }
 
@@ -84,6 +94,32 @@ function loadPos() {
   return defaultPos();
 }
 
+function randomTarget(current) {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  // occasionally target a visible button/nav item
+  if (Math.random() < 0.35) {
+    const els = Array.from(document.querySelectorAll('button, a.btn, .nav-item, .l-plan, .card'))
+      .filter(el => {
+        const r = el.getBoundingClientRect();
+        return r.width > 30 && r.height > 20 && r.bottom > 0 && r.top < h && r.right > 0 && r.left < w;
+      });
+    if (els.length) {
+      const el = els[Math.floor(Math.random() * els.length)];
+      const r = el.getBoundingClientRect();
+      const tx = r.left + r.width / 2 - SIZE / 2 + (Math.random() * 40 - 20);
+      const ty = r.top - SIZE - 8 + (Math.random() * 16 - 8);
+      const t = clampPos(tx, ty);
+      if (Math.hypot(t.x - current.x, t.y - current.y) > 60) return t;
+    }
+  }
+  for (let i = 0; i < 8; i++) {
+    const t = clampPos(MARGIN + Math.random() * (w - SIZE - MARGIN * 2), MARGIN + Math.random() * (h - SIZE - MARGIN * 2));
+    if (Math.hypot(t.x - current.x, t.y - current.y) > 80) return t;
+  }
+  return clampPos(MARGIN + Math.random() * (w - SIZE - MARGIN * 2), MARGIN + Math.random() * (h - SIZE - MARGIN * 2));
+}
+
 export default function FoxMascot() {
   const location = useLocation();
   const [msg, setMsg] = useState('');
@@ -93,10 +129,17 @@ export default function FoxMascot() {
   const [sparkle, setSparkle] = useState(0);
   const [pos, setPos] = useState(loadPos);
   const [dragging, setDragging] = useState(false);
+  const [running, setRunning] = useState(false);
+  const [facingLeft, setFacingLeft] = useState(false);
   const hideTimer = useRef();
   const clickIndex = useRef(0);
+  const playIndex = useRef(0);
   const dragRef = useRef(null);
   const wasDragged = useRef(false);
+  const posRef = useRef(pos);
+  const roamTimer = useRef();
+  const runStopTimer = useRef();
+  const pauseRoamUntil = useRef(0);
 
   const routeKey = useMemo(() => {
     const p = location.pathname;
@@ -111,11 +154,14 @@ export default function FoxMascot() {
     setWaving(wave);
     setTimeout(() => setWaving(false), 900);
     clearTimeout(hideTimer.current);
-    hideTimer.current = setTimeout(() => setVisible(false), 3500);
+    hideTimer.current = setTimeout(() => setVisible(false), 3200);
   }
+
+  useEffect(() => { posRef.current = pos; }, [pos]);
 
   useEffect(() => {
     show(routeMessages[routeKey] || 'Explora a LeadIA!');
+    pauseRoamUntil.current = Date.now() + 2500;
   }, [routeKey]);
 
   useEffect(() => {
@@ -123,16 +169,51 @@ export default function FoxMascot() {
       setBlinking(true);
       setTimeout(() => setBlinking(false), 180);
     }, 4200);
-    const onResize = () => setPos(p => clampPos(p.x, p.y));
+    const onResize = () => {
+      const c = clampPos(posRef.current.x, posRef.current.y);
+      posRef.current = c;
+      setPos(c);
+    };
     window.addEventListener('resize', onResize);
-    return () => { clearInterval(id); clearTimeout(hideTimer.current); window.removeEventListener('resize', onResize); };
+    return () => { clearInterval(id); clearTimeout(hideTimer.current); clearTimeout(roamTimer.current); clearTimeout(runStopTimer.current); window.removeEventListener('resize', onResize); };
   }, []);
 
-  const posRef = useRef(pos);
-  useEffect(() => { posRef.current = pos; }, [pos]);
+  // Autonomous roaming
+  useEffect(() => {
+    function schedule(delay = 2200 + Math.random() * 2200) {
+      clearTimeout(roamTimer.current);
+      roamTimer.current = setTimeout(move, delay);
+    }
+    function move() {
+      if (dragging || Date.now() < pauseRoamUntil.current) { schedule(800); return; }
+      const from = posRef.current;
+      const to = randomTarget(from);
+      const dx = to.x - from.x;
+      if (Math.abs(dx) > 8) setFacingLeft(dx < 0);
+      setRunning(true);
+      posRef.current = to;
+      setPos(to);
+      if (Math.random() < 0.28) {
+        const t = playMessages[playIndex.current % playMessages.length];
+        playIndex.current += 1;
+        show(t, false);
+      }
+      clearTimeout(runStopTimer.current);
+      runStopTimer.current = setTimeout(() => {
+        setRunning(false);
+        try { localStorage.setItem(POS_KEY, JSON.stringify(posRef.current)); } catch {}
+        schedule(1800 + Math.random() * 2600);
+      }, 2700);
+    }
+    schedule(1800);
+    return () => { clearTimeout(roamTimer.current); clearTimeout(runStopTimer.current); };
+  }, [dragging]);
 
   useEffect(() => {
     if (!dragging) return;
+    clearTimeout(roamTimer.current);
+    clearTimeout(runStopTimer.current);
+    setRunning(false);
     const onMove = (e) => {
       const d = dragRef.current;
       if (!d) return;
@@ -148,6 +229,7 @@ export default function FoxMascot() {
       wasDragged.current = !!d?.moved;
       setDragging(false);
       dragRef.current = null;
+      pauseRoamUntil.current = Date.now() + 3000;
       try { localStorage.setItem(POS_KEY, JSON.stringify(posRef.current)); } catch {}
     };
     window.addEventListener('pointermove', onMove);
@@ -173,20 +255,35 @@ export default function FoxMascot() {
     clickIndex.current += 1;
     setSparkle(s => s + 1);
     show(text, true);
+    pauseRoamUntil.current = Date.now() + 2500;
   }
 
+  const bubbleBelow = pos.y < 110;
+  const bubbleW = 240;
+  const center = pos.x + SIZE / 2;
+  const half = bubbleW / 2;
+  const minCenter = 12 + half;
+  const maxCenter = (typeof window !== 'undefined' ? window.innerWidth : 1000) - 12 - half;
+  const shift = Math.max(minCenter - center, Math.min(maxCenter - center, 0));
+
   return (
-    <div className="fox-mascot" style={{ left: pos.x, top: pos.y }} aria-live="polite">
-      {visible && <div className="fox-bubble">{msg}</div>}
+    <div
+      className={`fox-mascot ${bubbleBelow ? 'bubble-below' : ''} ${dragging ? 'dragging' : ''} ${running ? 'fox-running' : ''}`}
+      style={{ left: pos.x, top: pos.y }}
+      aria-live="polite"
+    >
+      {visible && <div className="fox-bubble" style={{ transform: `translateX(calc(-50% + ${shift}px))` }}>{msg}</div>}
       {sparkle > 0 && <div className="fox-sparkle" key={sparkle}>✨</div>}
       <button
         className={`fox-btn fox-float ${dragging ? 'dragging' : ''}`}
         onPointerDown={onPointerDown}
         onClick={onClick}
-        aria-label="Mascote raposa da LeadIA - arraste para mover"
+        aria-label="Mascote raposa da LeadIA - clique para interagir, arraste para mover"
         title="Clique para interagir • Arraste para mover"
       >
-        <FoxSVG waving={waving} blinking={blinking} />
+        <div className={`fox-face ${facingLeft ? 'left' : ''}`}>
+          <FoxSVG waving={waving} blinking={blinking} />
+        </div>
       </button>
     </div>
   );
