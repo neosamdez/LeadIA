@@ -79,7 +79,7 @@ export default function Settings() {
                 {!form.nvidiaApiKey && import.meta.env.VITE_NVIDIA_API_KEY && <span style={{ fontSize: 12, color: '#6EE7B7', fontWeight: 400 }}>Chave detectada via .env.local (variável de ambiente).</span>}
               </label>
               <label style={{ display: 'grid', gap: 6, fontSize: 14, fontWeight: 600 }}>Modelo
-                <input value={form.nvidiaModel || ''} onChange={e => setForm({ ...form, nvidiaModel: e.target.value })} placeholder="meta/llama-3.1-70b-instruct" />
+                <input value={form.nvidiaModel || ''} onChange={e => setForm({ ...form, nvidiaModel: e.target.value })} placeholder="nvidia/nemotron-3.5-lightning-30b-a3b" />
               </label>
               <label style={{ display: 'grid', gap: 6, fontSize: 14, fontWeight: 600 }}>Proxy URL (opcional)
                 <input value={form.nvidiaProxyUrl || ''} onChange={e => setForm({ ...form, nvidiaProxyUrl: e.target.value })} placeholder="https://seu-proxy.com/v1/chat/completions" />

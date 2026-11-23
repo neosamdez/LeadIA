@@ -5,7 +5,7 @@ export function getNvidiaApiKey(settings) {
 }
 
 export function getNvidiaModel(settings) {
-  return (settings?.nvidiaModel || import.meta.env.VITE_NVIDIA_MODEL || 'meta/llama-3.1-70b-instruct').trim();
+  return (settings?.nvidiaModel || import.meta.env.VITE_NVIDIA_MODEL || 'nvidia/nemotron-3.5-lightning-30b-a3b').trim();
 }
 
 export function getNvidiaUrl(settings) {

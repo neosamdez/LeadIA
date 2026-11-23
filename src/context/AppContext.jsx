@@ -35,7 +35,7 @@ const defaultState = {
     autoReply: true,
     followUp: true,
     nvidiaApiKey: '',
-    nvidiaModel: import.meta.env.VITE_NVIDIA_MODEL || 'meta/llama-3.1-70b-instruct',
+    nvidiaModel: import.meta.env.VITE_NVIDIA_MODEL || 'nvidia/nemotron-3.5-lightning-30b-a3b',
     nvidiaProxyUrl: import.meta.env.VITE_NVIDIA_PROXY_URL || '',
     useNvidiaApi: true,
   },
