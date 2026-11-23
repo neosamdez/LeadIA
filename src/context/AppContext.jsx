@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { seedConversations, seedLeads } from '../data/mockData';
 import { personas, defaultPersonaId } from '../data/personas';
+import { isSupabaseConfigured } from '../lib/config';
+import { onAuthStateChange, signOut } from '../services/auth';
 
 const AppContext = createContext(null);
 const STORAGE_KEY = 'leadia_app_v1';
@@ -83,10 +85,37 @@ export function AppProvider({ children }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return undefined;
+    const { data } = onAuthStateChange((_event, session) => {
+      const u = session?.user;
+      setState((s) => {
+        if (u) {
+          return {
+            ...s,
+            user: {
+              id: u.id,
+              name: u.user_metadata?.full_name || u.email?.split('@')[0] || 'Usuário',
+              company: u.user_metadata?.company || s.user?.company || 'Minha Empresa',
+              email: u.email || '',
+              mode: 'real',
+            },
+          };
+        }
+        if (s.user?.mode === 'real') return { ...s, user: null };
+        return s;
+      });
+    });
+    return () => data?.subscription?.unsubscribe?.();
+  }, []);
+
   const api = useMemo(() => ({
     ...state,
     login: (user) => setState((s) => ({ ...s, user })),
-    logout: () => setState((s) => ({ ...s, user: null })),
+    logout: () => {
+      if (isSupabaseConfigured()) signOut().catch(() => {});
+      setState((s) => ({ ...s, user: null }));
+    },
     recordEvent: (leadId, event) => setState((s) => ({
       ...s,
       leadEvents: { ...s.leadEvents, [leadId]: [...(s.leadEvents[leadId] || []), { time: nowTime(), ...event }] },
