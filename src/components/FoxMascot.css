@@ -1,50 +1,102 @@
 .fox-mascot {
   position: fixed; z-index: 90;
-  width: 72px; height: 72px;
+  width: 80px; height: 80px;
   pointer-events: none;
   user-select: none;
-  transition: left 2.6s linear, top 2.6s linear;
+  transition: left 2.8s cubic-bezier(.22,.68,.36,1), top 2.8s cubic-bezier(.22,.68,.36,1);
   will-change: left, top;
+  perspective: 500px;
 }
 .fox-mascot.dragging { transition: none; }
+.fox-mascot.dragging .fox-3d { transition: none; }
+.fox-shadow {
+  position: absolute; left: 50%; bottom: 2px; width: 52px; height: 14px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba(0,0,0,.35) 0%, rgba(0,0,0,0) 70%);
+  filter: blur(2px);
+  animation: fox-shadow 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+.fox-running .fox-shadow { animation: fox-shadow-run .28s ease-in-out infinite; }
 .fox-bubble {
-  position: absolute; left: 50%; bottom: 80px;
+  position: absolute; left: 50%; bottom: 88px;
   width: max-content; max-width: min(240px, calc(100vw - 24px));
   padding: 10px 14px; border-radius: 14px;
-  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02)), var(--surf);
+  background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02)), var(--surf);
   border: 1px solid var(--line-strong); color: var(--ink);
-  font-size: 13px; line-height: 1.4; box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  font-size: 13px; line-height: 1.4; box-shadow: 0 12px 32px rgba(0,0,0,.38), 0 0 0 1px rgba(255,255,255,.03) inset;
   animation: fox-pop .25s ease-out;
   pointer-events: auto;
   text-align: center;
   transform: translateX(-50%);
+  backdrop-filter: blur(4px);
 }
-.fox-mascot.bubble-below .fox-bubble { bottom: auto; top: 80px; }
+.fox-mascot.bubble-below .fox-bubble { bottom: auto; top: 88px; }
 .fox-btn {
-  width: 72px; height: 72px; border: 0; background: transparent; padding: 0; cursor: grab;
-  pointer-events: auto; filter: drop-shadow(0 10px 20px rgba(0,0,0,.35));
-  transition: transform .2s ease; touch-action: none;
+  width: 80px; height: 80px; border: 0; background: transparent; padding: 0; cursor: grab;
+  pointer-events: auto; position: relative;
+  transition: transform .25s cubic-bezier(.22,.68,.36,1); touch-action: none;
+  transform-style: preserve-3d;
 }
-.fox-btn:hover { transform: scale(1.08); }
+.fox-btn:hover { transform: scale(1.08) translateY(-2px); }
 .fox-btn:active { cursor: grabbing; }
-.fox-btn.dragging { cursor: grabbing; transition: none; transform: scale(1.04); }
-.fox-face { transition: transform .25s ease; transform-origin: center; }
-.fox-face.left { transform: scaleX(-1); }
-.fox-float { animation: fox-float 3.2s ease-in-out infinite; }
-.fox-running .fox-float { animation: fox-run .28s ease-in-out infinite; }
-.fox-running .fox-tail { transform-origin: 60px 52px; animation: fox-tail .25s ease-in-out infinite; }
-.fox-running .fox-paw { transform-origin: 28px 60px; animation: fox-run-paws .28s ease-in-out infinite alternate; }
-.fox-running .fox-paw-back { transform-origin: 48px 60px; animation: fox-run-paws .28s ease-in-out infinite alternate-reverse; }
-.fox-wave .fox-tail { transform-origin: 60px 52px; animation: fox-tail .5s ease-in-out 2; }
-.fox-wave .fox-paw { transform-origin: 24px 52px; animation: fox-paw .4s ease-in-out 2; }
+.fox-btn.dragging { cursor: grabbing; transition: none; transform: scale(1.05) rotateX(6deg); }
+.fox-3d {
+  width: 80px; height: 80px;
+  transform-style: preserve-3d;
+  transition: transform .45s cubic-bezier(.22,.68,.36,1);
+  will-change: transform;
+}
+.fox-face-wrap { width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .35s cubic-bezier(.22,.68,.36,1); }
+.fox-face-wrap.left { transform: scaleX(-1); }
+.fox-float { animation: fox-float 3.4s ease-in-out infinite; transform-origin: center bottom; }
+.fox-running .fox-float { animation: fox-run .32s cubic-bezier(.4,0,.6,1) infinite; }
+.fox-running .fox-3d { transition: transform .2s ease-out; }
+.fox-svg { width: 80px; height: 80px; overflow: visible; filter: drop-shadow(0 8px 10px rgba(0,0,0,.28)); }
+.fox-running .fox-svg { filter: drop-shadow(0 12px 14px rgba(0,0,0,.3)); }
+
+/* parts */
+.fox-tail { transform-origin: 54px 54px; animation: fox-tail-idle 2.8s ease-in-out infinite; }
+.fox-running .fox-tail { animation: fox-tail-run .22s ease-in-out infinite alternate; }
+.fox-wave .fox-tail { animation: fox-tail-wave .45s ease-in-out 2; }
+.fox-ear-l { transform-origin: 24px 22px; animation: fox-ear 4.5s ease-in-out infinite; }
+.fox-ear-r { transform-origin: 52px 22px; animation: fox-ear 4.5s ease-in-out infinite .2s; }
+.fox-running .fox-ear-l, .fox-running .fox-ear-r { animation: fox-ear-run .32s ease-in-out infinite alternate; }
+.fox-head { transform-origin: 38px 30px; animation: fox-head-idle 4s ease-in-out infinite; }
+.fox-running .fox-head { animation: fox-head-run .32s ease-in-out infinite; }
+.fox-body-group { transform-origin: 38px 56px; animation: fox-breathe 3s ease-in-out infinite; }
+.fox-running .fox-body-group { animation: fox-body-run .32s ease-in-out infinite; }
+.fox-paw-front { transform-origin: 30px 62px; }
+.fox-paw-back { transform-origin: 46px 62px; }
+.fox-running .fox-paw-front { animation: fox-paw-run .32s ease-in-out infinite alternate; }
+.fox-running .fox-paw-back { animation: fox-paw-run .32s ease-in-out infinite alternate-reverse; }
+.fox-wave .fox-paw-front { animation: fox-paw-wave .35s ease-in-out 3; }
 .fox-blink .fox-eye { animation: fox-blink .18s ease-in-out 1; transform-origin: center; }
-.fox-sparkle { position: absolute; left: 50%; top: -14px; font-size: 18px; animation: fox-sparkle .9s ease-out forwards; pointer-events: none; margin-left: -9px; }
-@keyframes fox-float { 0%,100%{ transform: translateY(0)} 50%{ transform: translateY(-5px)} }
-@keyframes fox-run { 0%,100%{ transform: translateY(0) rotate(0deg)} 25%{ transform: translateY(-4px) rotate(-2deg)} 75%{ transform: translateY(-2px) rotate(2deg)} }
-@keyframes fox-pop { from{ opacity:0; transform: translateY(6px) scale(.96)} to{ opacity:1; transform: translateY(0) scale(1)} }
-@keyframes fox-tail { 0%,100%{ transform: rotate(0)} 25%{ transform: rotate(14deg)} 75%{ transform: rotate(-12deg)} }
-@keyframes fox-paw { 0%,100%{ transform: rotate(0)} 50%{ transform: rotate(-18deg)} }
-@keyframes fox-run-paws { from{ transform: rotate(-10deg)} to{ transform: rotate(12deg)} }
+.fox-sparkle { position: absolute; left: 50%; top: -10px; font-size: 18px; animation: fox-sparkle .9s ease-out forwards; pointer-events: none; margin-left: -9px; }
+
+@keyframes fox-float { 0%,100%{ transform: translateY(0) } 50%{ transform: translateY(-5px) } }
+@keyframes fox-run { 0%,100%{ transform: translateY(0) scaleY(1) scaleX(1)} 30%{ transform: translateY(-7px) scaleY(1.03) scaleX(.98)} 60%{ transform: translateY(-2px) scaleY(.97) scaleX(1.02)} }
+@keyframes fox-shadow { 0%,100%{ transform: translateX(-50%) scale(1); opacity:.35 } 50%{ transform: translateX(-50%) scale(.85); opacity:.22 } }
+@keyframes fox-shadow-run { 0%,100%{ transform: translateX(-50%) scale(1); opacity:.35 } 30%{ transform: translateX(-50%) scale(.7); opacity:.18 } 60%{ transform: translateX(-50%) scale(.95); opacity:.32 } }
+@keyframes fox-pop { from{ opacity:0; transform: translateX(-50%) translateY(8px) scale(.94)} to{ opacity:1; transform: translateX(-50%) translateY(0) scale(1)} }
+@keyframes fox-tail-idle { 0%,100%{ transform: rotate(0deg)} 50%{ transform: rotate(8deg)} }
+@keyframes fox-tail-run { from{ transform: rotate(-12deg)} to{ transform: rotate(18deg)} }
+@keyframes fox-tail-wave { 0%,100%{ transform: rotate(0)} 25%{ transform: rotate(16deg)} 75%{ transform: rotate(-14deg)} }
+@keyframes fox-ear { 0%,90%,100%{ transform: rotate(0)} 93%{ transform: rotate(-6deg)} 96%{ transform: rotate(4deg)} }
+@keyframes fox-ear-run { from{ transform: rotate(-8deg)} to{ transform: rotate(6deg)} }
+@keyframes fox-head-idle { 0%,100%{ transform: rotate(0) translateY(0)} 50%{ transform: rotate(1.5deg) translateY(-1px)} }
+@keyframes fox-head-run { 0%,100%{ transform: translateY(0) rotate(-2deg)} 50%{ transform: translateY(-1.5px) rotate(2deg)} }
+@keyframes fox-breathe { 0%,100%{ transform: scaleY(1)} 50%{ transform: scaleY(1.02)} }
+@keyframes fox-body-run { 0%,100%{ transform: scaleY(1) rotate(0)} 30%{ transform: scaleY(1.03) rotate(-1deg)} 60%{ transform: scaleY(.98) rotate(1deg)} }
+@keyframes fox-paw-run { from{ transform: rotate(-18deg) translateY(0)} to{ transform: rotate(22deg) translateY(-2px)} }
+@keyframes fox-paw-wave { 0%,100%{ transform: rotate(0)} 50%{ transform: rotate(-24deg) translateY(-2px)} }
 @keyframes fox-blink { 0%,100%{ transform: scaleY(1)} 50%{ transform: scaleY(.1)} }
 @keyframes fox-sparkle { 0%{ opacity:0; transform: translateY(0) scale(.5)} 30%{ opacity:1; transform: translateY(-10px) scale(1)} 100%{ opacity:0; transform: translateY(-28px) scale(1.1)} }
-@media (max-width: 700px){ .fox-btn{ width: 60px; height: 60px; } .fox-bubble{ max-width: 200px; font-size: 12px; } .fox-mascot{ transition-duration: 2s; } }
+
+@media (max-width: 700px){
+  .fox-mascot{ width:64px; height:64px; transition-duration: 2.2s; }
+  .fox-btn,.fox-3d,.fox-svg{ width:64px; height:64px; }
+  .fox-bubble{ max-width: 200px; font-size: 12px; bottom: 72px; }
+  .fox-mascot.bubble-below .fox-bubble{ top: 72px; }
+  .fox-shadow{ width:42px; height:11px; }
+}
