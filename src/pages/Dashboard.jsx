@@ -107,7 +107,7 @@ export default function Dashboard() {
         <Stat icon={DollarSign} label="Receita gerada" value={`R$ ${stats.receita}`} note="No período simulado" color={{ bg: 'rgba(255,90,82,.14)', fg: '#FF8A84' }} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr .8fr', gap: 16, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr .8fr', gap: 16, marginBottom: 16, alignItems: 'start' }}>
         <div className="card" style={{ padding: 22, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
             <Target size={18} color="var(--acc)" />
