@@ -1,18 +1,55 @@
 import { useMemo, useState } from 'react';
-import { Search, Plus, X, Eye, MessageSquare, Target, Tag, AlertCircle } from 'lucide-react';
+import { Search, Plus, X, Eye, MessageSquare, Target, Tag, AlertCircle, Trash2, Pencil, Copy, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { channelOptions, statusOptions } from '../data/mockData';
 
 const statusColor = { 'Novo': 'blue', 'Em atendimento': 'yellow', 'Qualificado': 'blue', 'Proposta': 'yellow', 'Convertido': 'green', 'Perdido': 'red' };
 
-function LeadDetail({ lead, messages, events, onClose, onOpenChat }) {
+function scoreReasons(lead) {
+  const reasons = [];
+  const score = lead.score ?? 60;
+  if (score >= 80) reasons.push('Alta intenção e bom encaixe comercial.');
+  if ((lead.tags || []).some(t => /alta|quente|urg|prior/i.test(t))) reasons.push('Tags indicam prioridade comercial.');
+  if (['Proposta', 'Qualificado'].includes(lead.status)) reasons.push(`Status "${lead.status}" mostra avanço no funil.`);
+  if (/orçamento|parcel|comprar|fechar|agendar|proposta/i.test(lead.lastMessage || '')) reasons.push('Última mensagem indica intenção de avanço.');
+  if (/caro|preço|alto|desconto/i.test(lead.lastMessage || '')) reasons.push('Objeção de preço detectada - tratar com valor/condição.');
+  if (!reasons.length) reasons.push('Score baseado em perfil inicial e engajamento atual.');
+  return reasons;
+}
+
+function LeadDetail({ lead, messages, events, onClose, onOpenChat, onUpdate, onDelete }) {
+  const [editing, setEditing] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [form, setForm] = useState(null);
   if (!lead) return null;
   const score = lead.score ?? 60;
   const scoreColor = score >= 80 ? '#6EE7B7' : score >= 60 ? '#FCD34D' : '#FF8A84';
+  const reasons = scoreReasons(lead);
+
+  function startEdit() {
+    setForm({ name: lead.name, channel: lead.channel, interest: lead.interest, value: lead.value, status: lead.status, score: lead.score ?? 60, nextAction: lead.nextAction || '', lossReason: lead.lossReason || '', tags: (lead.tags || []).join(', ') });
+    setEditing(true);
+  }
+  function saveEdit(e) {
+    e.preventDefault();
+    onUpdate(lead.id, {
+      ...form,
+      value: Number(form.value) || 0,
+      score: Math.max(0, Math.min(100, Number(form.score) || 0)),
+      tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
+      avatar: form.name.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase(),
+    });
+    setEditing(false);
+  }
+  function copySummary() {
+    const text = `Lead: ${lead.name}\nCanal: ${lead.channel}\nInteresse: ${lead.interest}\nStatus: ${lead.status}\nScore: ${lead.score ?? 60}\nValor estimado: R$ ${lead.value}\nPróxima ação: ${lead.nextAction || '-'}\nTags: ${(lead.tags || []).join(', ') || '-'}\nÚltima mensagem: ${lead.lastMessage || '-'}`;
+    navigator.clipboard?.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }).catch(() => {});
+  }
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,12,.55)', display: 'flex', justifyContent: 'flex-end', zIndex: 60 }} onClick={onClose}>
-      <div className="card" onClick={(e) => e.stopPropagation()} style={{ width: 'min(520px, 100%)', height: '100%', borderRadius: '16px 0 0 16px', padding: 24, overflowY: 'auto' }}>
+      <div className="card" onClick={(e) => e.stopPropagation()} style={{ width: 'min(560px, 100%)', height: '100%', borderRadius: '16px 0 0 16px', padding: 24, overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 20 }}>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
             <div style={{ width: 46, height: 46, borderRadius: '50%', background: 'var(--bg-alt)', display: 'grid', placeItems: 'center', fontWeight: 800 }}>{lead.avatar}</div>
@@ -21,36 +58,70 @@ function LeadDetail({ lead, messages, events, onClose, onOpenChat }) {
               <div style={{ color: 'var(--mute)', fontSize: 13 }}>{lead.channel} · {lead.interest}</div>
             </div>
           </div>
-          <button className="btn btn-ghost btn-sm" onClick={onClose}><X size={18} /></button>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-          <div style={{ padding: 14, border: '1px solid var(--line)', borderRadius: 12, background: 'var(--bg-alt)' }}>
-            <div style={{ fontSize: 12, color: 'var(--mute)', marginBottom: 4 }}>Score de conversão</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: scoreColor }}>{score}</div>
-          </div>
-          <div style={{ padding: 14, border: '1px solid var(--line)', borderRadius: 12, background: 'var(--bg-alt)' }}>
-            <div style={{ fontSize: 12, color: 'var(--mute)', marginBottom: 4 }}>Valor estimado</div>
-            <div style={{ fontSize: 28, fontWeight: 800 }}>R$ {lead.value}</div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <button className="btn btn-ghost btn-sm" onClick={copySummary} title="Copiar resumo">{copied ? <CheckCircle2 size={16} /> : <Copy size={16} />}</button>
+            <button className="btn btn-ghost btn-sm" onClick={startEdit} title="Editar"><Pencil size={16} /></button>
+            <button className="btn btn-ghost btn-sm" onClick={() => { if (confirm('Excluir este lead?')) { onDelete(lead.id); onClose(); } }} title="Excluir"><Trash2 size={16} /></button>
+            <button className="btn btn-ghost btn-sm" onClick={onClose}><X size={18} /></button>
           </div>
         </div>
 
-        <div style={{ display: 'grid', gap: 12, marginBottom: 18 }}>
-          <div style={{ padding: 14, border: '1px solid var(--line)', borderRadius: 12 }}>
-            <div style={{ fontSize: 12, color: 'var(--mute)', display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 }}><Target size={14} /> Próxima ação sugerida</div>
-            <div style={{ fontWeight: 600 }}>{lead.nextAction || 'Acompanhar lead'}</div>
-          </div>
-          <div style={{ padding: 14, border: '1px solid var(--line)', borderRadius: 12 }}>
-            <div style={{ fontSize: 12, color: 'var(--mute)', display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}><Tag size={14} /> Tags</div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>{(lead.tags || ['Lead']).map(t => <span key={t} className="badge blue">{t}</span>)}</div>
-          </div>
-          {lead.status === 'Perdido' && (
-            <div style={{ padding: 14, border: '1px solid rgba(255,90,82,.25)', borderRadius: 12, background: 'rgba(255,90,82,.08)' }}>
-              <div style={{ fontSize: 12, color: '#FF8A84', display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 }}><AlertCircle size={14} /> Motivo de perda</div>
-              <div style={{ fontWeight: 600 }}>{lead.lossReason || 'Não informado'}</div>
+        {editing ? (
+          <form onSubmit={saveEdit} style={{ display: 'grid', gap: 10, marginBottom: 20, padding: 14, border: '1px solid var(--line)', borderRadius: 12 }}>
+            <div style={{ fontWeight: 700 }}>Editar lead</div>
+            <label style={{ display: 'grid', gap: 4, fontSize: 13 }}>Nome<input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required /></label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <label style={{ display: 'grid', gap: 4, fontSize: 13 }}>Canal<select value={form.channel} onChange={e => setForm({ ...form, channel: e.target.value })}>{channelOptions.map(c => <option key={c}>{c}</option>)}</select></label>
+              <label style={{ display: 'grid', gap: 4, fontSize: 13 }}>Status<select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>{statusOptions.map(s => <option key={s}>{s}</option>)}</select></label>
             </div>
-          )}
-        </div>
+            <label style={{ display: 'grid', gap: 4, fontSize: 13 }}>Interesse<input value={form.interest} onChange={e => setForm({ ...form, interest: e.target.value })} /></label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <label style={{ display: 'grid', gap: 4, fontSize: 13 }}>Valor (R$)<input type="number" value={form.value} onChange={e => setForm({ ...form, value: e.target.value })} /></label>
+              <label style={{ display: 'grid', gap: 4, fontSize: 13 }}>Score<input type="number" min="0" max="100" value={form.score} onChange={e => setForm({ ...form, score: e.target.value })} /></label>
+            </div>
+            <label style={{ display: 'grid', gap: 4, fontSize: 13 }}>Próxima ação<input value={form.nextAction} onChange={e => setForm({ ...form, nextAction: e.target.value })} /></label>
+            <label style={{ display: 'grid', gap: 4, fontSize: 13 }}>Tags (vírgula)<input value={form.tags} onChange={e => setForm({ ...form, tags: e.target.value })} /></label>
+            <label style={{ display: 'grid', gap: 4, fontSize: 13 }}>Motivo de perda<input value={form.lossReason} onChange={e => setForm({ ...form, lossReason: e.target.value })} /></label>
+            <div style={{ display: 'flex', gap: 8 }}><button className="btn btn-primary btn-sm" type="submit">Salvar</button><button type="button" className="btn btn-ghost btn-sm" onClick={() => setEditing(false)}>Cancelar</button></div>
+          </form>
+        ) : (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+              <div style={{ padding: 14, border: '1px solid var(--line)', borderRadius: 12, background: 'var(--bg-alt)' }}>
+                <div style={{ fontSize: 12, color: 'var(--mute)', marginBottom: 4 }}>Score de conversão</div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: scoreColor }}>{score}</div>
+              </div>
+              <div style={{ padding: 14, border: '1px solid var(--line)', borderRadius: 12, background: 'var(--bg-alt)' }}>
+                <div style={{ fontSize: 12, color: 'var(--mute)', marginBottom: 4 }}>Valor estimado</div>
+                <div style={{ fontSize: 28, fontWeight: 800 }}>R$ {lead.value}</div>
+              </div>
+            </div>
+
+            <div style={{ padding: 14, border: '1px solid var(--line)', borderRadius: 12, marginBottom: 16 }}>
+              <div style={{ fontSize: 12, color: 'var(--mute)', marginBottom: 6 }}>Por que esse score?</div>
+              <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--mute)', fontSize: 13, display: 'grid', gap: 4 }}>
+                {reasons.map((r, i) => <li key={i}>{r}</li>)}
+              </ul>
+            </div>
+
+            <div style={{ display: 'grid', gap: 12, marginBottom: 18 }}>
+              <div style={{ padding: 14, border: '1px solid var(--line)', borderRadius: 12 }}>
+                <div style={{ fontSize: 12, color: 'var(--mute)', display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 }}><Target size={14} /> Próxima ação sugerida</div>
+                <div style={{ fontWeight: 600 }}>{lead.nextAction || 'Acompanhar lead'}</div>
+              </div>
+              <div style={{ padding: 14, border: '1px solid var(--line)', borderRadius: 12 }}>
+                <div style={{ fontSize: 12, color: 'var(--mute)', display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}><Tag size={14} /> Tags</div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>{(lead.tags || []).length ? (lead.tags || []).map(t => <span key={t} className="badge blue">{t}</span>) : <span style={{ color: 'var(--mute)', fontSize: 13 }}>Sem tags</span>}</div>
+              </div>
+              {lead.status === 'Perdido' && (
+                <div style={{ padding: 14, border: '1px solid rgba(255,90,82,.25)', borderRadius: 12, background: 'rgba(255,90,82,.08)' }}>
+                  <div style={{ fontSize: 12, color: '#FF8A84', display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 }}><AlertCircle size={14} /> Motivo de perda</div>
+                  <div style={{ fontWeight: 600 }}>{lead.lossReason || 'Não informado'}</div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
 
         <div style={{ marginBottom: 18 }}>
           <h3 style={{ margin: '0 0 10px', fontSize: 16 }}>Timeline do lead</h3>
@@ -82,19 +153,23 @@ function LeadDetail({ lead, messages, events, onClose, onOpenChat }) {
 }
 
 export default function Leads() {
-  const { leads, addLead, updateLeadStatus, conversations, leadEvents } = useApp();
+  const { leads, addLead, updateLead, updateLeadStatus, deleteLead, conversations, leadEvents } = useApp();
   const navigate = useNavigate();
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('Todos');
+  const [channel, setChannel] = useState('Todos');
+  const [minScore, setMinScore] = useState(0);
   const [open, setOpen] = useState(false);
   const [detailId, setDetailId] = useState(null);
   const [form, setForm] = useState({ name: '', channel: 'Instagram', interest: '', value: '' });
 
   const filtered = useMemo(() => leads.filter(l => {
-    const matchQ = (l.name + l.interest + l.channel).toLowerCase().includes(q.toLowerCase());
+    const matchQ = (l.name + l.interest + l.channel + (l.tags || []).join(' ')).toLowerCase().includes(q.toLowerCase());
     const matchS = status === 'Todos' || l.status === status;
-    return matchQ && matchS;
-  }), [leads, q, status]);
+    const matchC = channel === 'Todos' || l.channel === channel;
+    const matchScore = (l.score ?? 0) >= Number(minScore);
+    return matchQ && matchS && matchC && matchScore;
+  }), [leads, q, status, channel, minScore]);
 
   const detailLead = leads.find(l => l.id === detailId);
 
@@ -121,15 +196,23 @@ export default function Leads() {
         <button className="btn btn-primary" onClick={() => setOpen(true)}><Plus size={16} /> Novo lead</button>
       </div>
 
-      <div className="card" style={{ padding: 16, marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-        <div style={{ position: 'relative', flex: '1 1 260px' }}>
+      <div className="card" style={{ padding: 16, marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ position: 'relative', flex: '1 1 240px' }}>
           <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--mute)' }} />
-          <input placeholder="Buscar por nome, interesse ou canal..." value={q} onChange={e => setQ(e.target.value)} style={{ paddingLeft: 36 }} />
+          <input placeholder="Buscar por nome, interesse, canal ou tag..." value={q} onChange={e => setQ(e.target.value)} style={{ paddingLeft: 36 }} />
         </div>
-        <select value={status} onChange={e => setStatus(e.target.value)} style={{ width: 220, flex: '0 0 auto' }}>
-          <option>Todos</option>
+        <select value={status} onChange={e => setStatus(e.target.value)} style={{ width: 180, flex: '0 0 auto' }}>
+          <option value="Todos">Todos status</option>
           {statusOptions.map(s => <option key={s}>{s}</option>)}
         </select>
+        <select value={channel} onChange={e => setChannel(e.target.value)} style={{ width: 160, flex: '0 0 auto' }}>
+          <option value="Todos">Todos canais</option>
+          {channelOptions.map(c => <option key={c}>{c}</option>)}
+        </select>
+        <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: 'var(--mute)' }}>
+          Score ≥ {minScore}
+          <input type="range" min="0" max="100" value={minScore} onChange={e => setMinScore(e.target.value)} style={{ width: 120 }} />
+        </label>
       </div>
 
       <div className="card" style={{ overflow: 'auto' }}>
@@ -174,7 +257,7 @@ export default function Leads() {
         </table>
       </div>
 
-      {detailLead && <LeadDetail lead={detailLead} messages={conversations[detailLead.id] || []} events={leadEvents[detailLead.id] || []} onClose={() => setDetailId(null)} onOpenChat={(id) => { setDetailId(null); navigate(`/app/conversas/${id}`); }} />}
+      {detailLead && <LeadDetail lead={detailLead} messages={conversations[detailLead.id] || []} events={leadEvents[detailLead.id] || []} onClose={() => setDetailId(null)} onOpenChat={(id) => { setDetailId(null); navigate(`/app/conversas/${id}`); }} onUpdate={updateLead} onDelete={deleteLead} />}
 
       {open && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,12,.55)', display: 'grid', placeItems: 'center', padding: 20, zIndex: 50 }} onClick={() => setOpen(false)}>

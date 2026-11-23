@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Send, Bot, User, Sparkles, Lightbulb, UserCheck, AlertCircle, Zap, History, X } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Lightbulb, UserCheck, AlertCircle, Zap, History, X, Copy, FileText, CalendarPlus, Brain, CheckCircle2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { generateNvidiaReply, generateNvidiaClientMessage, isNvidiaConfigured } from '../services/nvidia';
 
@@ -34,7 +34,7 @@ function getSuggestions(lastClientText = '') {
 }
 
 export default function Conversations() {
-  const { leads, conversations, sendMessage, updateLeadStatus, settings, recordEvent, leadEvents } = useApp();
+  const { leads, conversations, sendMessage, updateLeadStatus, settings, recordEvent, leadEvents, addFollowUp } = useApp();
   const { leadId } = useParams();
   const navigate = useNavigate();
   const [selected, setSelected] = useState(leadId || leads[0]?.id);
@@ -43,6 +43,8 @@ export default function Conversations() {
   const [simulating, setSimulating] = useState(false);
   const [aiError, setAiError] = useState('');
   const [showTimeline, setShowTimeline] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [showProposal, setShowProposal] = useState(false);
   const endRef = useRef(null);
   const typingTimer = useRef();
   const abortRef = useRef();
@@ -55,6 +57,26 @@ export default function Conversations() {
   const msgs = conversations[lead?.id] || [];
   const lastClient = [...msgs].reverse().find(m => m.from === 'client');
   const suggestions = getSuggestions(lastClient?.text || '');
+  const intent = (() => {
+    const t = (lastClient?.text || '').toLowerCase();
+    if (!t) return { label: 'Sem mensagem', tone: 'blue' };
+    if (/caro|preço|alto|desconto|valor/.test(t)) return { label: 'Objeção de preço', tone: 'yellow' };
+    if (/fechar|comprar|pagamento|pix|boleto|assinar/.test(t)) return { label: 'Intenção de compra', tone: 'green' };
+    if (/agendar|visita|reunião|horário|ligar/.test(t)) return { label: 'Agendamento', tone: 'blue' };
+    if (/não|nao|depois|pensar/.test(t)) return { label: 'Hesitação', tone: 'red' };
+    return { label: 'Interesse geral', tone: 'blue' };
+  })();
+
+  function copyLeadSummary() {
+    if (!lead) return;
+    const text = `Resumo LeadIA\nLead: ${lead.name}\nCanal: ${lead.channel}\nInteresse: ${lead.interest}\nStatus: ${lead.status}\nScore: ${lead.score ?? 60}\nValor: R$ ${lead.value}\nÚltima mensagem: ${lead.lastMessage || '-'}\nPróxima ação: ${lead.nextAction || '-'}`;
+    navigator.clipboard?.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }).catch(() => {});
+  }
+
+  function buildProposalText() {
+    if (!lead) return '';
+    return `Olá ${lead.name.split(' ')[0]},\n\nConforme nossa conversa, segue uma proposta inicial para ${lead.interest}.\n\nEmpresa: ${settings.companyName}\nSegmento: ${settings.segment}\nValor estimado: R$ ${lead.value}\nCondição: a definir conforme necessidade\n\nPróximo passo: confirmar escopo e agendar validação final.\n\nAtenciosamente,\nEquipe ${settings.companyName} (via LeadIA)`;
+  }
 
   function pick(id) { setSelected(id); navigate(`/app/conversas/${id}`); }
 
@@ -232,14 +254,17 @@ export default function Conversations() {
             <>
               <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 18 }}>{lead.name}</div>
+                  <div style={{ fontWeight: 700, fontSize: 18, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>{lead.name} <span className={`badge ${intent.tone}`} style={{ fontSize: 11 }}><Brain size={11} style={{ marginRight: 4 }} />{intent.label}</span></div>
                   <div style={{ fontSize: 13, color: 'var(--mute)' }}>{lead.channel} · {lead.interest} · <span className="badge blue">{lead.status}</span></div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <button className="btn btn-sm btn-outline" onClick={() => setShowTimeline(true)}><History size={14} /> Timeline</button>
-                  <button className="btn btn-sm btn-outline" onClick={handoff}><UserCheck size={14} /> Handoff humano</button>
-                  <button className="btn btn-sm btn-outline" onClick={() => sendAI()} disabled={typing || simulating}><Sparkles size={14} /> {isNvidiaConfigured(settings) ? 'Gerar resposta IA (NVIDIA)' : 'Simular resposta IA'}</button>
-                  <button className="btn btn-sm btn-primary" onClick={simulateNegotiation} disabled={typing || simulating}><Zap size={14} /> {simulating ? 'Simulando...' : 'Simular negociação IA'}</button>
+                  <button className="btn btn-sm btn-outline" onClick={copyLeadSummary}>{copied ? <CheckCircle2 size={14} /> : <Copy size={14} />} {copied ? 'Copiado' : 'Resumo'}</button>
+                  <button className="btn btn-sm btn-outline" onClick={() => setShowProposal(true)}><FileText size={14} /> Proposta</button>
+                  <button className="btn btn-sm btn-outline" onClick={() => { addFollowUp({ leadId: lead.id, title: `Follow-up: ${lead.name}`, note: `Retomar ${lead.interest}`, when: 'Amanhã' }); recordEvent(lead.id, { type: 'event', text: 'Follow-up agendado pelo consultor' }); }}><CalendarPlus size={14} /> Follow-up</button>
+                  <button className="btn btn-sm btn-outline" onClick={handoff}><UserCheck size={14} /> Handoff</button>
+                  <button className="btn btn-sm btn-outline" onClick={() => sendAI()} disabled={typing || simulating}><Sparkles size={14} /> {isNvidiaConfigured(settings) ? 'IA NVIDIA' : 'IA'}</button>
+                  <button className="btn btn-sm btn-primary" onClick={simulateNegotiation} disabled={typing || simulating}><Zap size={14} /> {simulating ? 'Simulando...' : 'Simular negociação'}</button>
                 </div>
               </div>
 
@@ -345,6 +370,22 @@ export default function Conversations() {
                   </div>
                 ));
               })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showProposal && lead && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,12,.55)', display: 'grid', placeItems: 'center', padding: 20, zIndex: 60 }} onClick={() => setShowProposal(false)}>
+          <div className="card" onClick={(e) => e.stopPropagation()} style={{ width: 'min(680px, 100%)', padding: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 12 }}>
+              <h2 style={{ margin: 0, fontSize: 22 }}><FileText size={18} style={{ verticalAlign: 'middle' }} /> Proposta / resumo</h2>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowProposal(false)}><X size={18} /></button>
+            </div>
+            <textarea readOnly value={buildProposalText()} style={{ width: '100%', minHeight: 260, resize: 'vertical', fontFamily: 'inherit' }} />
+            <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+              <button className="btn btn-primary btn-sm" onClick={() => { navigator.clipboard?.writeText(buildProposalText()); recordEvent(lead.id, { type: 'event', text: 'Proposta/resumo copiado' }); }}><Copy size={14} /> Copiar texto</button>
+              <button className="btn btn-outline btn-sm" onClick={() => { const blob = new Blob([buildProposalText()], { type: 'text/plain;charset=utf-8' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `proposta-${lead.name.replace(/\s+/g,'-').toLowerCase()}.txt`; a.click(); URL.revokeObjectURL(a.href); recordEvent(lead.id, { type: 'event', text: 'Proposta exportada (.txt)' }); }}>Exportar .txt</button>
             </div>
           </div>
         </div>

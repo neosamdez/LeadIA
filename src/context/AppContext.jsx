@@ -40,8 +40,11 @@ function mergeState(loaded) {
     ...loaded,
     settings: { ...defaultState.settings, ...(loaded.settings || {}) },
     tour: { ...defaultState.tour, ...(loaded.tour || {}) },
+    goals: { ...defaultState.goals, ...(loaded.goals || {}) },
     leadEvents: loaded.leadEvents || buildSeedEvents(loaded.leads || defaultState.leads, loaded.conversations || defaultState.conversations),
     activePersonaId: loaded.activePersonaId || defaultState.activePersonaId,
+    dismissedAlerts: Array.isArray(loaded.dismissedAlerts) ? loaded.dismissedAlerts : [],
+    followUps: Array.isArray(loaded.followUps) ? loaded.followUps : [],
   };
 }
 
@@ -51,6 +54,14 @@ const defaultState = {
   conversations: seedConversations,
   leadEvents: buildSeedEvents(seedLeads, seedConversations),
   activePersonaId: defaultPersonaId,
+  dismissedAlerts: [],
+  followUps: [],
+  goals: {
+    monthlyLeads: 30,
+    conversionRate: 25,
+    revenue: 15000,
+    responseMinutes: 5,
+  },
   settings: {
     companyName: 'Minha Empresa',
     segment: 'Agências de viagens',
@@ -80,6 +91,23 @@ export function AppProvider({ children }) {
       ...s,
       leadEvents: { ...s.leadEvents, [leadId]: [...(s.leadEvents[leadId] || []), { time: nowTime(), ...event }] },
     })),
+    updateLead: (id, patch) => setState((s) => ({
+      ...s,
+      leads: s.leads.map((l) => (l.id === id ? { ...l, ...patch } : l)),
+      leadEvents: patch.status && patch.status !== s.leads.find(l => l.id === id)?.status
+        ? { ...s.leadEvents, [id]: [...(s.leadEvents[id] || []), { type: 'status', text: `Status alterado: ${s.leads.find(l => l.id === id)?.status || '—'} → ${patch.status}`, time: nowTime() }] }
+        : s.leadEvents,
+    })),
+    deleteLead: (id) => setState((s) => {
+      const { [id]: _conv, ...restConv } = s.conversations;
+      const { [id]: _ev, ...restEv } = s.leadEvents;
+      return { ...s, leads: s.leads.filter((l) => l.id !== id), conversations: restConv, leadEvents: restEv, followUps: s.followUps.filter(f => f.leadId !== id) };
+    }),
+    dismissAlert: (alertId) => setState((s) => ({ ...s, dismissedAlerts: s.dismissedAlerts.includes(alertId) ? s.dismissedAlerts : [...s.dismissedAlerts, alertId] })),
+    clearDismissedAlerts: () => setState((s) => ({ ...s, dismissedAlerts: [] })),
+    addFollowUp: (fu) => setState((s) => ({ ...s, followUps: [{ id: 'fu' + Date.now(), done: false, createdAt: nowTime(), ...fu }, ...s.followUps] })),
+    completeFollowUp: (id) => setState((s) => ({ ...s, followUps: s.followUps.map(f => f.id === id ? { ...f, done: true } : f) })),
+    updateGoals: (patch) => setState((s) => ({ ...s, goals: { ...s.goals, ...patch } })),
     updateLeadStatus: (id, status) => setState((s) => {
       const prev = s.leads.find(l => l.id === id)?.status;
       if (prev === status) return s;
@@ -116,6 +144,8 @@ export function AppProvider({ children }) {
         conversations: p.conversations,
         leadEvents: buildSeedEvents(p.leads, p.conversations),
         activePersonaId: p.id,
+        dismissedAlerts: [],
+        followUps: [],
         settings: { ...s.settings, ...p.settings, ...keep },
       };
     }),

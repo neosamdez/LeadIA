@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { BarChart3, TrendingUp, Clock, DollarSign, MessageSquare, AlertCircle, Activity } from 'lucide-react';
+import { BarChart3, TrendingUp, Clock, DollarSign, MessageSquare, AlertCircle, Activity, Target, Save } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { useApp } from '../context/AppContext';
 
@@ -53,11 +53,12 @@ function ChartCard({ title, icon: Icon, type, setType, options, children, note }
 }
 
 export default function Analytics() {
-  const { leads } = useApp();
+  const { leads, goals, updateGoals } = useApp();
   const [funnelType, setFunnelType] = useState('bar');
   const [channelType, setChannelType] = useState('pie');
   const [lossType, setLossType] = useState('bar');
   const [trendType, setTrendType] = useState('area');
+  const [goalForm, setGoalForm] = useState(null);
 
   const data = useMemo(() => {
     const total = leads.length || 1;
@@ -231,6 +232,40 @@ export default function Analytics() {
             )}
           </ResponsiveContainer>
         </ChartCard>
+      </div>
+
+      <div className="card" style={{ padding: 22, marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 14 }}>
+          <h2 style={{ margin: 0, fontSize: 20, display: 'flex', gap: 8, alignItems: 'center' }}><Target size={18} color="var(--acc)" /> Metas vs resultado</h2>
+          <button className="btn btn-sm btn-outline" onClick={() => setGoalForm(goalForm ? null : { ...goals })}>{goalForm ? 'Fechar' : 'Editar metas'}</button>
+        </div>
+        {goalForm && (
+          <form onSubmit={(e) => { e.preventDefault(); updateGoals({ monthlyLeads: Number(goalForm.monthlyLeads)||0, conversionRate: Number(goalForm.conversionRate)||0, revenue: Number(goalForm.revenue)||0, responseMinutes: Number(goalForm.responseMinutes)||0 }); setGoalForm(null); }} style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 10, marginBottom: 14 }}>
+            {[['monthlyLeads','Meta leads/mês'],['conversionRate','Meta conversão (%)'],['revenue','Meta receita (R$)'],['responseMinutes','Meta resposta (min)']].map(([k,label]) => (
+              <label key={k} style={{ display: 'grid', gap: 4, fontSize: 12, color: 'var(--mute)' }}>{label}<input type="number" value={goalForm[k]} onChange={e => setGoalForm({ ...goalForm, [k]: e.target.value })} /></label>
+            ))}
+            <div style={{ gridColumn: '1 / -1' }}><button className="btn btn-primary btn-sm" type="submit"><Save size={14} /> Salvar metas</button></div>
+          </form>
+        )}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 12 }}>
+          {[
+            { label: 'Leads', actual: data.total, goal: goals.monthlyLeads, fmt: v => v },
+            { label: 'Conversão', actual: data.taxa, goal: goals.conversionRate, fmt: v => `${v}%` },
+            { label: 'Receita', actual: data.receita, goal: goals.revenue, fmt: v => `R$ ${v}` },
+            { label: 'Resposta', actual: 1, goal: goals.responseMinutes, fmt: v => `${v} min`, invert: true },
+          ].map((m) => {
+            const pct = m.invert ? (m.actual <= m.goal ? 100 : Math.round((m.goal / Math.max(m.actual,1)) * 100)) : Math.min(100, Math.round((m.actual / Math.max(m.goal,1)) * 100));
+            const ok = m.invert ? m.actual <= m.goal : m.actual >= m.goal;
+            return (
+              <div key={m.label} style={{ padding: 14, border: '1px solid var(--line)', borderRadius: 12 }}>
+                <div style={{ fontSize: 12, color: 'var(--mute)' }}>{m.label}</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: ok ? '#6EE7B7' : '#FCD34D' }}>{m.fmt(m.actual)}</div>
+                <div style={{ fontSize: 12, color: 'var(--mute)', marginBottom: 8 }}>Meta: {m.fmt(m.goal)}</div>
+                <div style={{ height: 8, background: 'var(--surf-2)', borderRadius: 99, overflow: 'hidden' }}><div style={{ width: `${pct}%`, height: '100%', background: ok ? '#34D399' : '#FBBF24' }} /></div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div className="card" style={{ padding: 22 }}>
