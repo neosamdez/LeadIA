@@ -107,24 +107,45 @@ export default function Dashboard() {
         <Stat icon={DollarSign} label="Receita gerada" value={`R$ ${stats.receita}`} note="No período simulado" color={{ bg: 'rgba(255,90,82,.14)', fg: '#FF8A84' }} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr .8fr', gap: 16, marginBottom: 16, alignItems: 'start' }}>
-        <div className="card" style={{ padding: 22, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <Target size={18} color="var(--acc)" />
-            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Funil comercial</h2>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.3fr) minmax(0,1fr)', gap: 16, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gap: 16, minWidth: 0 }}>
+          <div className="card" style={{ padding: 22, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+              <Target size={18} color="var(--acc)" />
+              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Funil comercial</h2>
+            </div>
+            <div style={{ display: 'grid', gap: 12 }}>
+              {funnel.map((f) => (
+                <div key={f.stage}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 6 }}>
+                    <span style={{ fontWeight: 600 }}>{f.stage}</span>
+                    <span style={{ color: 'var(--mute)' }}>{f.count} lead(s)</span>
+                  </div>
+                  <div style={{ height: 12, background: 'var(--bg-alt)', borderRadius: 999, overflow: 'hidden' }}>
+                    <div style={{ width: `${Math.max(f.count ? 8 : 0, f.pct)}%`, height: '100%', background: f.stage === 'Convertido' ? 'var(--wa)' : 'var(--acc)', borderRadius: 999, transition: 'width .3s' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div style={{ display: 'grid', gap: 12 }}>
-            {funnel.map((f) => (
-              <div key={f.stage}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 6 }}>
-                  <span style={{ fontWeight: 600 }}>{f.stage}</span>
-                  <span style={{ color: 'var(--mute)' }}>{f.count} lead(s)</span>
+
+          <div className="card" style={{ padding: 22, minWidth: 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Leads recentes</h2>
+              <Link to="/app/leads" style={{ color: 'var(--acc)', fontWeight: 600, fontSize: 14, textDecoration: 'none' }}>Ver todos</Link>
+            </div>
+            <div style={{ display: 'grid', gap: 10 }}>
+              {recent.map((l) => (
+                <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid var(--line)' }}>
+                  <div className="avatar" style={{ width: 38, height: 38, borderRadius: '50%', background: 'var(--bg-alt)', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>{l.avatar}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{l.name}</div>
+                    <div style={{ color: 'var(--mute)', fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.interest}</div>
+                  </div>
+                  <span className={`badge ${statusColor[l.status] || ''}`}>{l.status}</span>
                 </div>
-                <div style={{ height: 12, background: 'var(--bg-alt)', borderRadius: 999, overflow: 'hidden' }}>
-                  <div style={{ width: `${Math.max(f.count ? 8 : 0, f.pct)}%`, height: '100%', background: f.stage === 'Convertido' ? 'var(--wa)' : 'var(--acc)', borderRadius: 999, transition: 'width .3s' }} />
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
 
@@ -152,7 +173,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="card" style={{ padding: 22 }}>
+          <div className="card" style={{ padding: 22, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <Zap size={18} color="var(--acc)" />
               <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Cenários prontos</h2>
@@ -165,56 +186,35 @@ export default function Dashboard() {
             </div>
             {scenarioMsg && <div style={{ marginTop: 12, fontSize: 13, color: 'var(--wa)', fontWeight: 600 }}>{scenarioMsg}</div>}
           </div>
-        </div>
-      </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 16 }}>
-        <div className="card" style={{ padding: 22 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Leads recentes</h2>
-            <Link to="/app/leads" style={{ color: 'var(--acc)', fontWeight: 600, fontSize: 14, textDecoration: 'none' }}>Ver todos</Link>
-          </div>
-          <div style={{ display: 'grid', gap: 10 }}>
-            {recent.map((l) => (
-              <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid var(--line)' }}>
-                <div className="avatar" style={{ width: 38, height: 38, borderRadius: '50%', background: 'var(--bg-alt)', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>{l.avatar}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 14 }}>{l.name}</div>
-                  <div style={{ color: 'var(--mute)', fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.interest}</div>
+          <div className="card" style={{ padding: 22, minWidth: 0 }}>
+            <h2 style={{ margin: '0 0 16px', fontSize: 20, fontWeight: 700 }}>Atividade da IA</h2>
+            <div style={{ display: 'grid', gap: 14 }}>
+              {[
+                { text: 'Respondeu leads novos em menos de 1 minuto', time: 'Agora', color: 'var(--wa)' },
+                { text: 'Qualificou interessados com perguntas comerciais', time: 'Hoje', color: 'var(--blue)' },
+                { text: 'Enviou propostas e registrou no CRM', time: 'Hoje', color: 'var(--warn)' },
+                { text: 'Identificou oportunidades de conversão', time: 'Hoje', color: 'var(--wa)' },
+              ].map((a, i) => (
+                <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: a.color, marginTop: 7, flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14 }}>{a.text}</div>
+                    <div style={{ fontSize: 12, color: 'var(--mute)', display: 'flex', alignItems: 'center', gap: 4 }}><Clock size={12} /> {a.time}</div>
+                  </div>
                 </div>
-                <span className={`badge ${statusColor[l.status] || ''}`}>{l.status}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="card" style={{ padding: 22 }}>
-          <h2 style={{ margin: '0 0 16px', fontSize: 20, fontWeight: 700 }}>Atividade da IA</h2>
-          <div style={{ display: 'grid', gap: 14 }}>
-            {[
-              { text: 'Respondeu leads novos em menos de 1 minuto', time: 'Agora', color: 'var(--wa)' },
-              { text: 'Qualificou interessados com perguntas comerciais', time: 'Hoje', color: 'var(--blue)' },
-              { text: 'Enviou propostas e registrou no CRM', time: 'Hoje', color: 'var(--warn)' },
-              { text: 'Identificou oportunidades de conversão', time: 'Hoje', color: 'var(--wa)' },
-            ].map((a, i) => (
-              <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: a.color, marginTop: 7, flexShrink: 0 }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14 }}>{a.text}</div>
-                  <div style={{ fontSize: 12, color: 'var(--mute)', display: 'flex', alignItems: 'center', gap: 4 }}><Clock size={12} /> {a.time}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div style={{ marginTop: 20, padding: 14, background: 'var(--bg-alt)', borderRadius: 10, fontSize: 14, color: 'var(--mute)' }}>
-            <strong style={{ color: 'var(--ink)' }}>Dica:</strong> use o tour guiado e os cenários prontos para apresentar o app ao vivo.
+              ))}
+            </div>
+            <div style={{ marginTop: 20, padding: 14, background: 'var(--bg-alt)', borderRadius: 10, fontSize: 14, color: 'var(--mute)' }}>
+              <strong style={{ color: 'var(--ink)' }}>Dica:</strong> use o tour guiado e os cenários prontos para apresentar o app ao vivo.
+            </div>
           </div>
         </div>
       </div>
 
       {summary && <ExecutiveSummary onClose={() => setSummary(false)} />}
 
-      <style>{`@media (max-width: 1000px){ .app-main [style*="grid-template-columns: repeat(4"]{grid-template-columns:repeat(2,minmax(0,1fr)) !important} .app-main [style*="1.5fr 1fr"], .app-main [style*="1.2fr .8fr"]{grid-template-columns:1fr !important} } @media (max-width: 560px){ .app-main [style*="grid-template-columns: repeat(4"]{grid-template-columns:1fr !important} }`}</style>
+      <style>{`@media (max-width: 1000px){ .app-main [style*="grid-template-columns: repeat(4"]{grid-template-columns:repeat(2,minmax(0,1fr)) !important} .app-main [style*="1.5fr 1fr"], .app-main [style*="1.2fr .8fr"], .app-main [style*="1.3fr"]{grid-template-columns:1fr !important} } @media (max-width: 560px){ .app-main [style*="grid-template-columns: repeat(4"]{grid-template-columns:1fr !important} }`}</style>
     </div>
   );
 }
