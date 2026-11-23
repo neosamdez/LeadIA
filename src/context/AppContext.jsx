@@ -36,6 +36,7 @@ const defaultState = {
     followUp: true,
     nvidiaApiKey: '',
     nvidiaModel: import.meta.env.VITE_NVIDIA_MODEL || 'meta/llama-3.1-70b-instruct',
+    nvidiaProxyUrl: import.meta.env.VITE_NVIDIA_PROXY_URL || '',
     useNvidiaApi: true,
   },
   tour: { active: false, step: 0 },

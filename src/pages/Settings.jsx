@@ -81,7 +81,11 @@ export default function Settings() {
               <label style={{ display: 'grid', gap: 6, fontSize: 14, fontWeight: 600 }}>Modelo
                 <input value={form.nvidiaModel || ''} onChange={e => setForm({ ...form, nvidiaModel: e.target.value })} placeholder="meta/llama-3.1-70b-instruct" />
               </label>
-              <div style={{ fontSize: 12, color: 'var(--mute)' }}>Endpoint: <code style={{ color: 'var(--ink)' }}>https://integrate.api.nvidia.com/v1/chat/completions</code></div>
+              <label style={{ display: 'grid', gap: 6, fontSize: 14, fontWeight: 600 }}>Proxy URL (opcional)
+                <input value={form.nvidiaProxyUrl || ''} onChange={e => setForm({ ...form, nvidiaProxyUrl: e.target.value })} placeholder="https://seu-proxy.com/v1/chat/completions" />
+                <span style={{ fontSize: 12, color: 'var(--mute)', fontWeight: 400 }}>Use um proxy para evitar CORS no browser (recomendado para GitHub Pages).</span>
+              </label>
+              <div style={{ fontSize: 12, color: 'var(--mute)' }}>Endpoint direto: <code style={{ color: 'var(--ink)' }}>https://integrate.api.nvidia.com/v1/chat/completions</code></div>
             </div>
           </div>
           <div className="card" style={{ padding: 24 }}>

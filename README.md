@@ -17,7 +17,7 @@ Landing page + painel demo funcional para apresentar a proposta de uma plataform
   - **Central de Alertas**: leads quentes, propostas pendentes, objeções detectadas e perdas sem motivo
   - **Arquitetura & LGPD**: fluxo técnico, segurança, APIs oficiais da Meta e conformidade
   - **Detalhe do lead**: drawer com score de conversão, tags, próxima ação sugerida, motivo de perda e timeline
-  - **Conversas com IA (NVIDIA NIM)**: gera respostas em tempo real via API NVIDIA (OpenAI-compatible), com fallback para sugestões simuladas, detecção de objeção, typing indicator e handoff humano
+  - **Conversas com IA (NVIDIA NIM)**: gera respostas em tempo real via API NVIDIA (OpenAI-compatible), com fallback para sugestões simuladas, detecção de objeção, typing indicator e handoff humano. Suporta **Proxy URL** nas Configurações e proxy dev Vite (`/api/nvidia`) para evitar CORS; em produção (GitHub Pages) use um proxy (ex.: `proxy/cloudflare-worker.js`).
   - **Cenários prontos** para apresentação (novo lead, objeção de preço, conversão)
   - **Tour guiado** pelo painel
   - **Resumo executivo** em modal (demo) e seção na landing

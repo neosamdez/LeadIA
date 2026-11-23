@@ -8,6 +8,11 @@ export function getNvidiaModel(settings) {
   return (settings?.nvidiaModel || import.meta.env.VITE_NVIDIA_MODEL || 'meta/llama-3.1-70b-instruct').trim();
 }
 
+export function getNvidiaUrl(settings) {
+  const proxy = (settings?.nvidiaProxyUrl || import.meta.env.VITE_NVIDIA_PROXY_URL || '').trim();
+  return proxy || NVIDIA_URL;
+}
+
 export function isNvidiaConfigured(settings) {
   return !!getNvidiaApiKey(settings) && !!settings?.useNvidiaApi;
 }
@@ -39,7 +44,7 @@ export async function generateNvidiaReply({ lead, conversations, settings, signa
 
   let res;
   try {
-    res = await fetch(NVIDIA_URL, {
+    res = await fetch(getNvidiaUrl(settings), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
