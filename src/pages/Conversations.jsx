@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Send, Bot, User, Sparkles } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Lightbulb, UserCheck } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 function timeNow() {
@@ -8,12 +8,29 @@ function timeNow() {
   return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
-const aiReplies = [
-  'Entendi! Posso te explicar as opções e enviar uma proposta personalizada. Qual é a melhor forma de contato?',
-  'Perfeito. Vou registrar seu interesse e encaminhar para o próximo passo. Você prefere continuar por aqui ou receber um link?',
-  'Ótima pergunta! Com base no que você informou, a melhor opção é o plano recomendado para o seu perfil. Quer que eu detalhe os valores?',
-  'Posso cuidar disso agora mesmo. Só preciso confirmar mais um detalhe para te enviar a proposta correta.',
-];
+function getSuggestions(lastClientText = '') {
+  const t = lastClientText.toLowerCase();
+  if (/caro|preço|alto|desconto|valor/.test(t)) return [
+    'Entendo sua preocupação com o valor. Posso te mostrar o custo-benefício e opções de parcelamento que cabem no seu orçamento?',
+    'Posso oferecer uma condição especial ou um bônus para facilitar sua decisão. Qual opção faz mais sentido para você?',
+  ];
+  if (/pensar|depois|retorno|ainda não/.test(t)) return [
+    'Sem problema! Posso te enviar um resumo com os principais pontos e te chamar no melhor horário. Qual seria?',
+    'Claro. Enquanto isso, quer que eu reserve a condição atual por mais um tempo para você avaliar com calma?',
+  ];
+  if (/fechar|pagar|link|comprar|quero/.test(t)) return [
+    'Ótimo! Vou te enviar o link de pagamento agora mesmo. Prefere cartão, Pix ou boleto?',
+    'Perfeito, vou finalizar seu atendimento e encaminhar os próximos passos para conclusão da compra.',
+  ];
+  if (/horário|agenda|disponibilidade|quando/.test(t)) return [
+    'Posso verificar a disponibilidade agora. Qual dia e horário funcionam melhor para você?',
+    'Temos horários disponíveis esta semana. Prefere atendimento presencial ou online?',
+  ];
+  return [
+    'Entendi! Posso te explicar as opções e enviar uma proposta personalizada para o seu caso.',
+    'Posso seguir com a qualificação e já te encaminhar para o melhor próximo passo. Tudo bem?',
+  ];
+}
 
 export default function Conversations() {
   const { leads, conversations, sendMessage, updateLeadStatus } = useApp();
@@ -21,28 +38,44 @@ export default function Conversations() {
   const navigate = useNavigate();
   const [selected, setSelected] = useState(leadId || leads[0]?.id);
   const [draft, setDraft] = useState('');
+  const [typing, setTyping] = useState(false);
   const endRef = useRef(null);
+  const typingTimer = useRef();
 
   useEffect(() => { if (leadId) setSelected(leadId); }, [leadId]);
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [selected, conversations]);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [selected, conversations, typing]);
+  useEffect(() => () => clearTimeout(typingTimer.current), []);
 
   const lead = useMemo(() => leads.find(l => l.id === selected) || leads[0], [leads, selected]);
   const msgs = conversations[lead?.id] || [];
+  const lastClient = [...msgs].reverse().find(m => m.from === 'client');
+  const suggestions = getSuggestions(lastClient?.text || '');
 
   function pick(id) { setSelected(id); navigate(`/app/conversas/${id}`); }
 
-  function send(from = 'consultor') {
-    const text = draft.trim();
+  function send(from = 'consultor', textOverride) {
+    const text = (textOverride ?? draft).trim();
     if (!text || !lead) return;
     sendMessage(lead.id, { from, text, time: timeNow() });
-    setDraft('');
+    if (!textOverride) setDraft('');
   }
 
-  function sendAI() {
+  function sendAI(textOverride) {
+    if (!lead || typing) return;
+    const text = (textOverride || suggestions[0]).trim();
+    setTyping(true);
+    clearTimeout(typingTimer.current);
+    typingTimer.current = setTimeout(() => {
+      sendMessage(lead.id, { from: 'ia', text, time: timeNow() });
+      if (lead.status === 'Novo') updateLeadStatus(lead.id, 'Em atendimento');
+      setTyping(false);
+    }, 900);
+  }
+
+  function handoff() {
     if (!lead) return;
-    const text = aiReplies[Math.floor(Math.random() * aiReplies.length)];
-    sendMessage(lead.id, { from: 'ia', text, time: timeNow() });
-    if (lead.status === 'Novo') updateLeadStatus(lead.id, 'Em atendimento');
+    sendMessage(lead.id, { from: 'ia', text: 'Vou encaminhar você para um consultor humano continuar o atendimento. Um momento, por favor.', time: timeNow() });
+    updateLeadStatus(lead.id, 'Em atendimento');
   }
 
   return (
@@ -50,14 +83,14 @@ export default function Conversations() {
       <div className="page-head">
         <div>
           <h1>Conversas</h1>
-          <p>Acompanhe o atendimento da IA e intervenha quando necessário.</p>
+          <p>Acompanhe o atendimento da IA, use sugestões inteligentes e intervenha quando necessário.</p>
         </div>
       </div>
 
-      <div className="card" style={{ display: 'grid', gridTemplateColumns: '320px 1fr', minHeight: 560, overflow: 'hidden' }}>
+      <div className="card" style={{ display: 'grid', gridTemplateColumns: '320px 1fr', minHeight: 600, overflow: 'hidden' }}>
         <div style={{ borderRight: '1px solid var(--line)', background: 'var(--surf-2)' }}>
           <div style={{ padding: 14, borderBottom: '1px solid var(--line)', fontWeight: 700, fontSize: 14, color: 'var(--mute)' }}>Caixa de entrada</div>
-          <div style={{ overflowY: 'auto', maxHeight: 560 }}>
+          <div style={{ overflowY: 'auto', maxHeight: 600 }}>
             {leads.map(l => (
               <button key={l.id} onClick={() => pick(l.id)} style={{ width: '100%', textAlign: 'left', padding: 14, border: 0, borderBottom: '1px solid var(--line)', background: l.id === lead?.id ? 'var(--surf-3)' : 'transparent', cursor: 'pointer' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
@@ -79,7 +112,10 @@ export default function Conversations() {
                   <div style={{ fontWeight: 700, fontSize: 18 }}>{lead.name}</div>
                   <div style={{ fontSize: 13, color: 'var(--mute)' }}>{lead.channel} · {lead.interest} · <span className="badge blue">{lead.status}</span></div>
                 </div>
-                <button className="btn btn-sm btn-outline" onClick={sendAI}><Sparkles size={14} /> Simular resposta IA</button>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button className="btn btn-sm btn-outline" onClick={handoff}><UserCheck size={14} /> Handoff humano</button>
+                  <button className="btn btn-sm btn-outline" onClick={() => sendAI()}><Sparkles size={14} /> Simular resposta IA</button>
+                </div>
               </div>
 
               <div style={{ flex: 1, padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, background: 'var(--bg-alt)' }}>
@@ -103,12 +139,31 @@ export default function Conversations() {
                     </div>
                   );
                 })}
+                {typing && (
+                  <div style={{ alignSelf: 'flex-end', maxWidth: '78%' }}>
+                    <div style={{ padding: '10px 13px', borderRadius: 16, borderBottomRightRadius: 4, background: 'var(--wa-bg)', color: 'var(--mute)', fontSize: 14 }}>
+                      <Bot size={12} style={{ marginRight: 6 }} /> LeadIA está digitando...
+                    </div>
+                  </div>
+                )}
                 <div ref={endRef} />
               </div>
 
-              <div style={{ padding: 14, borderTop: '1px solid var(--line)', display: 'flex', gap: 10 }}>
-                <input value={draft} onChange={e => setDraft(e.target.value)} placeholder="Digite uma mensagem como consultor..." onKeyDown={e => { if (e.key === 'Enter') send('consultor'); }} />
-                <button className="btn btn-primary" onClick={() => send('consultor')}><Send size={16} /> Enviar</button>
+              <div style={{ padding: 14, borderTop: '1px solid var(--line)', display: 'grid', gap: 10 }}>
+                <div>
+                  <div style={{ fontSize: 12, color: 'var(--mute)', display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}><Lightbulb size={13} /> Sugestões da IA</div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {suggestions.map((s, i) => (
+                      <button key={i} className="btn btn-sm btn-outline" style={{ whiteSpace: 'normal', textAlign: 'left', height: 'auto', padding: '8px 10px', fontSize: 12 }} onClick={() => sendAI(s)}>
+                        {s.length > 72 ? s.slice(0, 72) + '...' : s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <input value={draft} onChange={e => setDraft(e.target.value)} placeholder="Digite uma mensagem como consultor..." onKeyDown={e => { if (e.key === 'Enter') send('consultor'); }} />
+                  <button className="btn btn-primary" onClick={() => send('consultor')}><Send size={16} /> Enviar</button>
+                </div>
               </div>
             </>
           ) : <div style={{ padding: 24, color: 'var(--mute)' }}>Selecione um lead.</div>}

@@ -7,6 +7,7 @@ const steps = [
   { path: '/app', title: 'Dashboard', text: 'Veja métricas-chave: leads recebidos, taxa de conversão e receita simulada.' },
   { path: '/app/leads', title: 'Leads', text: 'Gerencie leads, filtre por status, crie novos contatos e acompanhe oportunidades.' },
   { path: '/app/conversas', title: 'Conversas', text: 'Acompanhe o histórico e simule respostas da IA para demonstrar o atendimento comercial.' },
+  { path: '/app/analytics', title: 'Analytics', text: 'Analise funil, canais, motivos de perda e recomendações da IA para decisões comerciais.' },
   { path: '/app/configuracoes', title: 'Configurações', text: 'Ajuste o tom da IA, regras de follow-up e resete a demonstração quando necessário.' },
 ];
 

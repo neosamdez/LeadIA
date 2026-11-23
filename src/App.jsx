@@ -6,6 +6,7 @@ import AppLayout from './layouts/AppLayout';
 import Dashboard from './pages/Dashboard';
 import Leads from './pages/Leads';
 import Conversations from './pages/Conversations';
+import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
 
 function Protected({ children }) {
@@ -32,6 +33,7 @@ export default function App() {
             <Route path="leads" element={<Leads />} />
             <Route path="conversas" element={<Conversations />} />
             <Route path="conversas/:leadId" element={<Conversations />} />
+            <Route path="analytics" element={<Analytics />} />
             <Route path="configuracoes" element={<Settings />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

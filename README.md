@@ -12,12 +12,13 @@ Landing page + painel demo funcional para apresentar a proposta de uma plataform
 - **Landing page**: proposta de valor, problema, como funciona, segmentos, planos, MVP e FAQ.
 - **Painel demo (funcional no front-end)**:
   - Dashboard com métricas simuladas e **funil comercial**
+  - **Analytics**: funil por etapa, desempenho por canal, motivos de perda, score médio e recomendações
+  - **Detalhe do lead**: drawer com score de conversão, tags, próxima ação sugerida, motivo de perda e timeline
+  - **Conversas com IA mais realista**: sugestões contextuais, detecção de objeção, typing indicator e handoff humano
   - **Cenários prontos** para apresentação (novo lead, objeção de preço, conversão)
-  - **Tour guiado** pelo painel (Dashboard → Leads → Conversas → Configurações)
+  - **Tour guiado** pelo painel (Dashboard → Leads → Conversas → Analytics → Configurações)
   - **Resumo executivo** em modal (demo) e seção na landing
   - Gestão de leads (filtro, status, criação)
-  - Conversas com histórico e envio de mensagens
-  - Simulação de resposta da IA
   - Configurações da empresa/IA
   - Persistência local via `localStorage`
 
@@ -79,12 +80,12 @@ src/
 
 ### 2. Melhorias de produto (experiência do usuário)
 
-- **Funil visual**: gráfico de funil (Novo → Qualificado → Proposta → Convertido) e taxa por etapa.
-- **Detalhe do lead**: página/modal com timeline completa, notas do vendedor, tarefas e próximos passos.
-- **Filtros avançados**: filtrar por canal, período, valor estimado, responsável e status.
-- **Respostas sugeridas pela IA**: botões de sugestão (“Enviar proposta”, “Responder objeção”, “Agendar call”).
-- **Notificações**: alertas de leads quentes, leads sem resposta e follow-ups pendentes.
-- **Acessibilidade e polish**: navegação por teclado, estados vazios, feedbacks de carregamento e refinamento mobile.
+- [x] **Funil visual**: gráfico de funil e visão por etapa.
+- [x] **Detalhe do lead**: drawer com timeline, score, tags, próxima ação e motivo de perda.
+- [x] **Respostas sugeridas pela IA**: sugestões contextuais, objeção de preço, handoff humano e typing indicator.
+- [x] **Analytics comercial**: desempenho por canal, motivos de perda e recomendações.
+- [ ] **Filtros avançados**: filtrar por canal, período, valor estimado, responsável e status.
+- [ ] **Notificações**: alertas de leads quentes, leads sem resposta e follow-ups pendentes.
 
 ### 3. Melhorias técnicas (para dar mais credibilidade)
 

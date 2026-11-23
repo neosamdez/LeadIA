@@ -1,10 +1,10 @@
 export const seedLeads = [
-  { id: 'l1', name: 'Mariana Costa', channel: 'Instagram', interest: 'Pacote Jericoacoara', status: 'Novo', value: 4800, lastMessage: 'Oi! Vi a viagem para Jericoacoara no Instagram. Qual o valor?', time: '14:02', avatar: 'MC' },
-  { id: 'l2', name: 'Rafael Lima', channel: 'WhatsApp', interest: 'Plano Pro', status: 'Qualificado', value: 197, lastMessage: 'Quero entender como funciona o follow-up automático.', time: '13:40', avatar: 'RL' },
-  { id: 'l3', name: 'Clínica Vida Plena', channel: 'Instagram', interest: 'Agendamento automático', status: 'Proposta', value: 397, lastMessage: 'Pode enviar uma proposta para duas unidades?', time: '12:15', avatar: 'CV' },
-  { id: 'l4', name: 'Beatriz Souza', channel: 'WhatsApp', interest: 'Salão - pacote mensal', status: 'Convertido', value: 197, lastMessage: 'Fechado! Vou fazer o pagamento agora.', time: '11:03', avatar: 'BS' },
-  { id: 'l5', name: 'Imobiliária Horizonte', channel: 'Instagram', interest: 'Qualificação de leads', status: 'Em atendimento', value: 397, lastMessage: 'Precisamos filtrar quem tem perfil de compra.', time: 'Ontem', avatar: 'IH' },
-  { id: 'l6', name: 'Carlos Mendes', channel: 'Instagram', interest: 'Curso de inglês', status: 'Perdido', value: 297, lastMessage: 'Vou pensar e te retorno.', time: 'Ontem', avatar: 'CM' },
+  { id: 'l1', name: 'Mariana Costa', channel: 'Instagram', interest: 'Pacote Jericoacoara', status: 'Novo', value: 4800, lastMessage: 'Oi! Vi a viagem para Jericoacoara no Instagram. Qual o valor?', time: '14:02', avatar: 'MC', score: 72, tags: ['Viagem', 'Casal'], nextAction: 'Qualificar perfil e datas', lossReason: '' },
+  { id: 'l2', name: 'Rafael Lima', channel: 'WhatsApp', interest: 'Plano Pro', status: 'Qualificado', value: 197, lastMessage: 'Quero entender como funciona o follow-up automático.', time: '13:40', avatar: 'RL', score: 84, tags: ['SaaS', 'Follow-up'], nextAction: 'Enviar proposta do plano Pro', lossReason: '' },
+  { id: 'l3', name: 'Clínica Vida Plena', channel: 'Instagram', interest: 'Agendamento automático', status: 'Proposta', value: 397, lastMessage: 'Pode enviar uma proposta para duas unidades?', time: '12:15', avatar: 'CV', score: 91, tags: ['Clínica', 'Multiunidade'], nextAction: 'Acompanhar proposta enviada', lossReason: '' },
+  { id: 'l4', name: 'Beatriz Souza', channel: 'WhatsApp', interest: 'Salão - pacote mensal', status: 'Convertido', value: 197, lastMessage: 'Fechado! Vou fazer o pagamento agora.', time: '11:03', avatar: 'BS', score: 97, tags: ['Salão', 'Mensal'], nextAction: 'Onboarding do cliente', lossReason: '' },
+  { id: 'l5', name: 'Imobiliária Horizonte', channel: 'Instagram', interest: 'Qualificação de leads', status: 'Em atendimento', value: 397, lastMessage: 'Precisamos filtrar quem tem perfil de compra.', time: 'Ontem', avatar: 'IH', score: 78, tags: ['Imobiliária', 'Qualificação'], nextAction: 'Configurar fluxo de qualificação', lossReason: '' },
+  { id: 'l6', name: 'Carlos Mendes', channel: 'Instagram', interest: 'Curso de inglês', status: 'Perdido', value: 297, lastMessage: 'Vou pensar e te retorno.', time: 'Ontem', avatar: 'CM', score: 35, tags: ['Educação', 'Preço'], nextAction: 'Reativar em 7 dias', lossReason: 'Sem decisão / adiou compra' },
 ];
 
 export const seedConversations = {

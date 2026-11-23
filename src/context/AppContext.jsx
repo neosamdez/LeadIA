@@ -64,7 +64,7 @@ export function AppProvider({ children }) {
       const time = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       const id = 'sim' + Date.now();
       if (type === 'novo_lead') {
-        const lead = { id, name: 'Fernanda Alves', channel: 'Instagram', interest: 'Pacote Fernando de Noronha', status: 'Novo', value: 6200, lastMessage: 'Oi! Vi o pacote para Noronha. Tem datas para julho?', time, avatar: 'FA' };
+        const lead = { id, name: 'Fernanda Alves', channel: 'Instagram', interest: 'Pacote Fernando de Noronha', status: 'Novo', value: 6200, lastMessage: 'Oi! Vi o pacote para Noronha. Tem datas para julho?', time, avatar: 'FA', score: 75, tags: ['Viagem', 'Alta intenção'], nextAction: 'Qualificar datas e número de pessoas', lossReason: '' };
         const conv = [
           { from: 'client', text: 'Oi! Vi o pacote para Noronha. Tem datas para julho?', time },
           { from: 'ia', text: 'Olá, Fernanda! Temos sim disponibilidade em julho. Você pretende viajar sozinha ou acompanhada?', time },
