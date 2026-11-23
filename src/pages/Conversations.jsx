@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Send, Bot, User, Sparkles, Lightbulb, UserCheck, AlertCircle } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Lightbulb, UserCheck, AlertCircle, Zap } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { generateNvidiaReply, isNvidiaConfigured } from '../services/nvidia';
 
@@ -40,6 +40,7 @@ export default function Conversations() {
   const [selected, setSelected] = useState(leadId || leads[0]?.id);
   const [draft, setDraft] = useState('');
   const [typing, setTyping] = useState(false);
+  const [simulating, setSimulating] = useState(false);
   const [aiError, setAiError] = useState('');
   const endRef = useRef(null);
   const typingTimer = useRef();
@@ -103,6 +104,77 @@ export default function Conversations() {
     }
   }
 
+  async function simulateNegotiation() {
+    if (!lead || typing || simulating) return;
+    setAiError('');
+    setSimulating(true);
+    const scenarios = [
+      {
+        steps: [
+          { client: 'Oi, vi o anúncio de vocês. Como funciona na prática?', status: 'Em atendimento' },
+          { client: 'Gostei. Qual o valor e tem período de teste?', status: 'Qualificado' },
+          { client: 'Faz sentido pra mim. Pode me enviar uma proposta?', status: 'Proposta' },
+        ],
+      },
+      {
+        steps: [
+          { client: 'Boa tarde! Estou comparando algumas opções no mercado.', status: 'Em atendimento' },
+          { client: 'Entendi a diferença. Vocês atendem empresas do meu porte?', status: 'Qualificado' },
+          { client: 'Perfeito, quero avançar. Qual o próximo passo?', status: 'Proposta' },
+        ],
+      },
+      {
+        steps: [
+          { client: 'Olá! Preciso resolver isso rápido na minha operação.', status: 'Em atendimento' },
+          { client: 'O valor está dentro do esperado. Tem contrato mensal?', status: 'Qualificado' },
+          { client: 'Ótimo, vamos fechar. Me manda o link por favor.', status: 'Convertido' },
+        ],
+      },
+    ];
+    const scenario = scenarios[Math.floor(Math.random() * scenarios.length)];
+    const useApi = isNvidiaConfigured(settings);
+    let conv = [...(conversations[lead.id] || [])];
+    const delay = (ms) => new Promise(r => setTimeout(r, ms));
+
+    try {
+      for (const step of scenario.steps) {
+        const clientMsg = { from: 'client', text: step.client, time: timeNow() };
+        sendMessage(lead.id, clientMsg);
+        conv = [...conv, clientMsg];
+        await delay(500);
+
+        setTyping(true);
+        let aiText;
+        try {
+          if (useApi) {
+            abortRef.current?.abort();
+            const controller = new AbortController();
+            abortRef.current = controller;
+            aiText = await generateNvidiaReply({ lead, conversations: conv, settings, signal: controller.signal });
+          } else {
+            await delay(700);
+            aiText = getSuggestions(step.client)[0];
+          }
+        } catch (err) {
+          if (err?.name === 'AbortError') throw err;
+          aiText = getSuggestions(step.client)[0];
+          setAiError(err?.message || 'Falha ao gerar resposta com NVIDIA.');
+        }
+        const aiMsg = { from: 'ia', text: aiText, time: timeNow() };
+        sendMessage(lead.id, aiMsg);
+        conv = [...conv, aiMsg];
+        updateLeadStatus(lead.id, step.status);
+        setTyping(false);
+        await delay(700);
+      }
+    } catch (err) {
+      if (err?.name !== 'AbortError') setAiError(err?.message || 'Falha na simulação.');
+    } finally {
+      setTyping(false);
+      setSimulating(false);
+    }
+  }
+
   function handoff() {
     if (!lead) return;
     sendMessage(lead.id, { from: 'ia', text: 'Vou encaminhar você para um consultor humano continuar o atendimento. Um momento, por favor.', time: timeNow() });
@@ -145,7 +217,8 @@ export default function Conversations() {
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <button className="btn btn-sm btn-outline" onClick={handoff}><UserCheck size={14} /> Handoff humano</button>
-                  <button className="btn btn-sm btn-outline" onClick={() => sendAI()} disabled={typing}><Sparkles size={14} /> {isNvidiaConfigured(settings) ? 'Gerar resposta IA (NVIDIA)' : 'Simular resposta IA'}</button>
+                  <button className="btn btn-sm btn-outline" onClick={() => sendAI()} disabled={typing || simulating}><Sparkles size={14} /> {isNvidiaConfigured(settings) ? 'Gerar resposta IA (NVIDIA)' : 'Simular resposta IA'}</button>
+                  <button className="btn btn-sm btn-primary" onClick={simulateNegotiation} disabled={typing || simulating}><Zap size={14} /> {simulating ? 'Simulando...' : 'Simular negociação IA'}</button>
                 </div>
               </div>
 

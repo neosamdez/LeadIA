@@ -196,7 +196,7 @@ export default function Landing() {
         <div className="container">
           <h2 className="section-title">Resumo executivo em 1 minuto</h2>
           <p className="section-lead">Uma visão rápida para apresentar o LeadIA na banca.</p>
-          <div className="l-seg" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+          <div className="l-seg l-seg-3">
             <div><b>Problema</b><p>PMEs perdem vendas por demora no atendimento e falta de follow-up.</p></div>
             <div><b>Solução</b><p>IA que atende, qualifica, faz follow-up e centraliza leads em um painel.</p></div>
             <div><b>Público</b><p>Negócios que vendem por Instagram/WhatsApp e precisam responder rápido.</p></div>

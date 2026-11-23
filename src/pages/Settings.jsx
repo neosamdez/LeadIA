@@ -99,7 +99,7 @@ export default function Settings() {
           </div>
         </div>
       </div>
-      <style>{`@media (max-width: 900px){ .app-main [style*="1.2fr .8fr"]{grid-template-columns:1fr !important} }`}</style>
+      <style>{`@media (max-width: 900px){ .app-main [style*="1.2fr"]{grid-template-columns:1fr !important} }`}</style>
     </div>
   );
 }

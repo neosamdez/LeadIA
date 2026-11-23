@@ -1,4 +1,4 @@
-.landing { background: var(--bg); }
+.landing { background: var(--bg); overflow-x: clip; }
 .l-nav { display: flex; justify-content: space-between; align-items: center; padding: 22px 0; gap: 16px; }
 .l-logo { font-weight: 800; font-size: 26px; letter-spacing: -.02em; text-decoration: none; color: var(--ink); }
 .l-logo b { color: var(--acc); }
@@ -38,6 +38,7 @@
 .l-steps li::before { content: counter(s); position: absolute; left: 0; top: 13px; width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #FF5A52, #E8453C); color: #fff; font-weight: 700; font-size: 13px; display: grid; place-items: center; box-shadow: 0 4px 14px rgba(232,69,60,.35); }
 
 .l-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 28px; }
+.l-seg.l-seg-3 { grid-template-columns: repeat(3, 1fr); }
 .l-seg div { background: var(--surf); border: 1.5px solid var(--line); border-radius: 14px; padding: 20px; }
 .l-seg b { display: block; font-size: 19px; margin-bottom: 4px; }
 .l-seg p { margin: 0; color: var(--mute); font-size: 15.5px; }
@@ -77,11 +78,11 @@
 @media (max-width: 860px) {
   .l-hero, .l-grid-2, .l-mvp { grid-template-columns: 1fr; gap: 32px; }
   .l-steps { grid-template-columns: 1fr; }
-  .l-seg { grid-template-columns: 1fr 1fr; }
+  .l-seg, .l-seg.l-seg-3 { grid-template-columns: 1fr 1fr; }
   .l-plans { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 520px) {
-  .l-seg, .l-plans { grid-template-columns: 1fr; }
+  .l-seg, .l-seg.l-seg-3, .l-plans { grid-template-columns: 1fr; }
   .l-cta-box { padding: 28px; }
 }
 @media (prefers-reduced-motion: reduce) { .l-msg { animation: none; } }
