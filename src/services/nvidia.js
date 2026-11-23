@@ -56,6 +56,7 @@ export async function generateNvidiaReply({ lead, conversations, settings, signa
         temperature: 0.7,
         top_p: 0.9,
         max_tokens: 220,
+        chat_template_kwargs: { enable_thinking: false },
       }),
       signal,
     });
