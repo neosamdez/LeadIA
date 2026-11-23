@@ -6,7 +6,7 @@ import { channelOptions, statusOptions } from '../data/mockData';
 
 const statusColor = { 'Novo': 'blue', 'Em atendimento': 'yellow', 'Qualificado': 'blue', 'Proposta': 'yellow', 'Convertido': 'green', 'Perdido': 'red' };
 
-function LeadDetail({ lead, messages, onClose, onOpenChat }) {
+function LeadDetail({ lead, messages, events, onClose, onOpenChat }) {
   if (!lead) return null;
   const score = lead.score ?? 60;
   const scoreColor = score >= 80 ? '#6EE7B7' : score >= 60 ? '#FCD34D' : '#FF8A84';
@@ -53,15 +53,25 @@ function LeadDetail({ lead, messages, onClose, onOpenChat }) {
         </div>
 
         <div style={{ marginBottom: 18 }}>
-          <h3 style={{ margin: '0 0 10px', fontSize: 16 }}>Timeline</h3>
+          <h3 style={{ margin: '0 0 10px', fontSize: 16 }}>Timeline do lead</h3>
           <div style={{ display: 'grid', gap: 10 }}>
-            {messages.length === 0 && <div style={{ color: 'var(--mute)', fontSize: 14 }}>Sem mensagens registradas.</div>}
-            {messages.map((m, i) => (
-              <div key={i} style={{ padding: 12, border: '1px solid var(--line)', borderRadius: 10, background: 'rgba(255,255,255,.02)' }}>
-                <div style={{ fontSize: 12, color: 'var(--mute)', marginBottom: 4 }}>{m.from === 'client' ? 'Cliente' : m.from === 'ia' ? 'LeadIA' : 'Consultor'} · {m.time}</div>
-                <div style={{ fontSize: 14 }}>{m.text}</div>
-              </div>
-            ))}
+            {(() => {
+              const toMin = (t) => { const m = /^([0-9]{1,2}):([0-9]{2})$/.exec(t || ''); return m ? (+m[1]) * 60 + (+m[2]) : -1; };
+              const ev = (events || []).map((e, i) => ({ kind: 'event', i, time: e.time || '', text: e.text, type: e.type || 'event' }));
+              const msg = (messages || []).map((m, i) => ({ kind: 'msg', i, time: m.time || '', text: m.text, from: m.from }));
+              const all = [...ev, ...msg].sort((a, b) => { const ta = toMin(a.time), tb = toMin(b.time); if (ta === -1 && tb === -1) return 0; if (ta === -1) return -1; if (tb === -1) return 1; return ta - tb || (a.kind === 'event' ? -1 : 1); });
+              if (all.length === 0) return <div style={{ color: 'var(--mute)', fontSize: 14 }}>Sem atividades registradas.</div>;
+              return all.map((item, idx) => (
+                <div key={idx} style={{ padding: 12, border: '1px solid var(--line)', borderRadius: 10, background: item.kind === 'event' ? 'rgba(255,255,255,.03)' : 'rgba(255,255,255,.02)' }}>
+                  <div style={{ fontSize: 12, color: 'var(--mute)', marginBottom: 4 }}>
+                    {item.kind === 'event'
+                      ? `${item.type === 'status' ? 'Status' : item.type === 'handoff' ? 'Handoff' : item.type === 'simulation' ? 'Simulação' : item.type === 'playbook' ? 'Playbook' : item.type === 'ia' ? 'IA' : 'Evento'} · ${item.time}`
+                      : `${item.from === 'client' ? 'Cliente' : item.from === 'ia' ? 'LeadIA' : 'Consultor'} · ${item.time}`}
+                  </div>
+                  <div style={{ fontSize: 14 }}>{item.text}</div>
+                </div>
+              ));
+            })()}
           </div>
         </div>
 
@@ -72,7 +82,7 @@ function LeadDetail({ lead, messages, onClose, onOpenChat }) {
 }
 
 export default function Leads() {
-  const { leads, addLead, updateLeadStatus, conversations } = useApp();
+  const { leads, addLead, updateLeadStatus, conversations, leadEvents } = useApp();
   const navigate = useNavigate();
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('Todos');
@@ -164,7 +174,7 @@ export default function Leads() {
         </table>
       </div>
 
-      {detailLead && <LeadDetail lead={detailLead} messages={conversations[detailLead.id] || []} onClose={() => setDetailId(null)} onOpenChat={(id) => { setDetailId(null); navigate(`/app/conversas/${id}`); }} />}
+      {detailLead && <LeadDetail lead={detailLead} messages={conversations[detailLead.id] || []} events={leadEvents[detailLead.id] || []} onClose={() => setDetailId(null)} onOpenChat={(id) => { setDetailId(null); navigate(`/app/conversas/${id}`); }} />}
 
       {open && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,12,.55)', display: 'grid', placeItems: 'center', padding: 20, zIndex: 50 }} onClick={() => setOpen(false)}>

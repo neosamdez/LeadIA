@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Save, RotateCcw } from 'lucide-react';
+import { Save, RotateCcw, Building2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { personas } from '../data/personas';
 
 export default function Settings() {
-  const { settings, updateSettings, resetDemo, user } = useApp();
+  const { settings, updateSettings, resetDemo, user, applyPersona, activePersonaId } = useApp();
   const [form, setForm] = useState(settings);
   const [saved, setSaved] = useState(false);
 
@@ -58,6 +59,17 @@ export default function Settings() {
         </form>
 
         <div style={{ display: 'grid', gap: 16, alignContent: 'start' }}>
+          <div className="card" style={{ padding: 24 }}>
+            <h2 style={{ margin: '0 0 8px', fontSize: 20, display: 'flex', gap: 8, alignItems: 'center' }}><Building2 size={18} color="var(--acc)" /> Demo por persona</h2>
+            <p style={{ margin: '0 0 12px', fontSize: 14, color: 'var(--mute)' }}>Carrega leads, conversas e contexto do segmento para apresentação.</p>
+            <div style={{ display: 'grid', gap: 8 }}>
+              {personas.map((p) => (
+                <button key={p.id} className={`btn btn-sm ${activePersonaId === p.id ? 'btn-primary' : 'btn-outline'}`} style={{ justifyContent: 'flex-start' }} onClick={() => { applyPersona(p.id); setForm(f => ({ ...f, ...p.settings })); }}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="card" style={{ padding: 24 }}>
             <h2 style={{ margin: '0 0 12px', fontSize: 20 }}>Conta demo</h2>
             <div style={{ fontSize: 14, color: 'var(--mute)', display: 'grid', gap: 6 }}>

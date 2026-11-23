@@ -17,24 +17,38 @@ export function isNvidiaConfigured(settings) {
   return !!getNvidiaApiKey(settings) && !!settings?.useNvidiaApi;
 }
 
-function buildSystemPrompt(lead, settings) {
+const PLAYBOOKS = {
+  qualificar: 'Playbook QUALIFICAR: faça perguntas objetivas para entender necessidade, prazo, orçamento, decisor e encaixe. Termine com uma pergunta clara.',
+  objeção: 'Playbook CONTORNAR OBJEÇÃO: reconheça a preocupação, traga valor/custo-benefício, ofereça alternativa (condição, parcelamento, bônus, escopo) sem inventar política. Termine com pergunta de avanço.',
+  proposta: 'Playbook ENVIAR PROPOSTA: resuma o valor percebido, confirme o que entra na proposta, peça dados necessários e proponha envio/próximo passo comercial.',
+  agendar: 'Playbook AGENDAR: proponha agendamento/ligação/demonstração, ofereça 2 opções e peça confirmação.',
+  recuperar: 'Playbook RECUPERAR LEAD: seja leve e útil, retome contexto, ofereça novo motivo de contato e faça CTA simples.',
+};
+
+function buildSystemPrompt(lead, settings, playbook) {
+  const extra = playbook && PLAYBOOKS[playbook] ? `\n${PLAYBOOKS[playbook]}` : '';
   return [
     `Você é a LeadIA, assistente comercial de IA da empresa "${settings?.companyName || 'Empresa'}".`,
     `Segmento: ${settings?.segment || 'Vendas'}.`,
     `Tom de voz: ${settings?.tone || 'Profissional e amigável'}.`,
     `Objetivo: atender, qualificar, tirar dúvidas, tratar objeções e conduzir o cliente para o próximo passo comercial.`,
-    `Regras: responda em português do Brasil, seja clara e objetiva, não invente preços/políticas não informadas, e quando necessário sugira handoff humano.`,
+    `Regras: responda em português do Brasil, seja clara e objetiva (máx. ~90 palavras), não invente preços/políticas não informadas, e quando necessário sugira handoff humano.`,
     `Contexto do lead: nome=${lead?.name || 'Cliente'}, canal=${lead?.channel || 'N/A'}, interesse=${lead?.interest || 'N/A'}, status=${lead?.status || 'N/A'}, valor estimado=R$ ${lead?.value ?? 'N/A'}.`,
     `Responda apenas com a mensagem para o cliente, sem aspas e sem prefixos como "LeadIA:".`,
+    extra,
   ].join(' ');
 }
 
-function toChatMessages(conversations, lead, settings) {
+function toChatMessages(conversations, lead, settings, playbook) {
   const history = (conversations || []).slice(-12).map(m => ({
     role: m.from === 'client' ? 'user' : 'assistant',
     content: m.text,
   }));
-  return [{ role: 'system', content: buildSystemPrompt(lead, settings) }, ...history];
+  const messages = [{ role: 'system', content: buildSystemPrompt(lead, settings, playbook) }, ...history];
+  if (playbook && PLAYBOOKS[playbook]) {
+    messages.push({ role: 'user', content: `Aplique o ${PLAYBOOKS[playbook].split(':')[0]} nesta conversa e gere a próxima mensagem para o cliente.` });
+  }
+  return messages;
 }
 
 async function callNvidia(messages, settings, signal, maxTokens = 220) {
@@ -77,9 +91,11 @@ async function callNvidia(messages, settings, signal, maxTokens = 220) {
   return text.replace(/^["']|["']$/g, '').trim();
 }
 
-export async function generateNvidiaReply({ lead, conversations, settings, signal }) {
-  return callNvidia(toChatMessages(conversations, lead, settings), settings, signal, 220);
+export async function generateNvidiaReply({ lead, conversations, settings, signal, playbook }) {
+  return callNvidia(toChatMessages(conversations, lead, settings, playbook), settings, signal, 220);
 }
+
+export { PLAYBOOKS };
 
 export async function generateNvidiaClientMessage({ lead, conversations, settings, signal, goal }) {
   const history = (conversations || []).slice(-10).map(m => ({

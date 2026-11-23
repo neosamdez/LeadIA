@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, MessageSquare, TrendingUp, DollarSign, ArrowRight, Clock, Compass, Sparkles, Target, FileText, X, Zap } from 'lucide-react';
+import { Users, MessageSquare, TrendingUp, DollarSign, ArrowRight, Clock, Compass, Sparkles, Target, FileText, X, Zap, Building2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { personas } from '../data/personas';
 
 function Stat({ icon: Icon, label, value, note, color }) {
   return (
@@ -57,7 +58,7 @@ function ExecutiveSummary({ onClose }) {
 }
 
 export default function Dashboard() {
-  const { leads, simulateScenario, startTour } = useApp();
+  const { leads, simulateScenario, startTour, applyPersona, activePersonaId } = useApp();
   const [summary, setSummary] = useState(false);
   const [scenarioMsg, setScenarioMsg] = useState('');
 
@@ -127,18 +128,43 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="card" style={{ padding: 22 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <Zap size={18} color="var(--acc)" />
-            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Cenários prontos</h2>
+        <div style={{ display: 'grid', gap: 16 }}>
+          <div className="card" style={{ padding: 22 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <Building2 size={18} color="var(--acc)" />
+              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Demo por persona</h2>
+            </div>
+            <p style={{ margin: '0 0 12px', color: 'var(--mute)', fontSize: 14 }}>Carregue um cenário completo para apresentar o produto em diferentes segmentos.</p>
+            <div style={{ display: 'grid', gap: 8 }}>
+              {personas.map((p) => (
+                <button
+                  key={p.id}
+                  className={`btn btn-sm ${activePersonaId === p.id ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ justifyContent: 'flex-start', textAlign: 'left', height: 'auto', padding: '10px 12px' }}
+                  onClick={() => applyPersona(p.id)}
+                >
+                  <div>
+                    <div style={{ fontWeight: 700 }}>{p.label}</div>
+                    <div style={{ fontSize: 12, opacity: .85, fontWeight: 400 }}>{p.description}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
-          <p style={{ margin: '0 0 14px', color: 'var(--mute)', fontSize: 14 }}>Use durante a apresentação para demonstrar o fluxo ao vivo.</p>
-          <div style={{ display: 'grid', gap: 10 }}>
-            <button className="btn btn-outline btn-sm" style={{ justifyContent: 'flex-start' }} onClick={() => runScenario('novo_lead', 'Novo lead do Instagram')}><Sparkles size={14} /> Simular novo lead do Instagram</button>
-            <button className="btn btn-outline btn-sm" style={{ justifyContent: 'flex-start' }} onClick={() => runScenario('objecao', 'Objeção de preço')}><Sparkles size={14} /> Simular objeção de preço</button>
-            <button className="btn btn-outline btn-sm" style={{ justifyContent: 'flex-start' }} onClick={() => runScenario('conversao', 'Conversão')}><Sparkles size={14} /> Simular conversão</button>
+
+          <div className="card" style={{ padding: 22 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <Zap size={18} color="var(--acc)" />
+              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Cenários prontos</h2>
+            </div>
+            <p style={{ margin: '0 0 14px', color: 'var(--mute)', fontSize: 14 }}>Use durante a apresentação para demonstrar o fluxo ao vivo.</p>
+            <div style={{ display: 'grid', gap: 10 }}>
+              <button className="btn btn-outline btn-sm" style={{ justifyContent: 'flex-start' }} onClick={() => runScenario('novo_lead', 'Novo lead do Instagram')}><Sparkles size={14} /> Simular novo lead do Instagram</button>
+              <button className="btn btn-outline btn-sm" style={{ justifyContent: 'flex-start' }} onClick={() => runScenario('objecao', 'Objeção de preço')}><Sparkles size={14} /> Simular objeção de preço</button>
+              <button className="btn btn-outline btn-sm" style={{ justifyContent: 'flex-start' }} onClick={() => runScenario('conversao', 'Conversão')}><Sparkles size={14} /> Simular conversão</button>
+            </div>
+            {scenarioMsg && <div style={{ marginTop: 12, fontSize: 13, color: 'var(--wa)', fontWeight: 600 }}>{scenarioMsg}</div>}
           </div>
-          {scenarioMsg && <div style={{ marginTop: 12, fontSize: 13, color: 'var(--wa)', fontWeight: 600 }}>{scenarioMsg}</div>}
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Send, Bot, User, Sparkles, Lightbulb, UserCheck, AlertCircle, Zap } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Lightbulb, UserCheck, AlertCircle, Zap, History, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { generateNvidiaReply, generateNvidiaClientMessage, isNvidiaConfigured } from '../services/nvidia';
 
@@ -34,7 +34,7 @@ function getSuggestions(lastClientText = '') {
 }
 
 export default function Conversations() {
-  const { leads, conversations, sendMessage, updateLeadStatus, settings } = useApp();
+  const { leads, conversations, sendMessage, updateLeadStatus, settings, recordEvent, leadEvents } = useApp();
   const { leadId } = useParams();
   const navigate = useNavigate();
   const [selected, setSelected] = useState(leadId || leads[0]?.id);
@@ -42,6 +42,7 @@ export default function Conversations() {
   const [typing, setTyping] = useState(false);
   const [simulating, setSimulating] = useState(false);
   const [aiError, setAiError] = useState('');
+  const [showTimeline, setShowTimeline] = useState(false);
   const endRef = useRef(null);
   const typingTimer = useRef();
   const abortRef = useRef();
@@ -64,10 +65,18 @@ export default function Conversations() {
     if (!textOverride) setDraft('');
   }
 
-  async function sendAI(textOverride) {
+  const playbookFallbacks = {
+    qualificar: `Olá ${lead?.name?.split(' ')[0] || ''}! Para eu te ajudar melhor, me conta: qual é sua principal necessidade, para quando você precisa e existe um orçamento estimado?`,
+    objeção: `Entendo sua preocupação, ${lead?.name?.split(' ')[0] || ''}. Posso te mostrar o custo-benefício e opções que façam mais sentido para o seu cenário. O que pesaria mais na sua decisão: prazo, condição ou resultado?`,
+    proposta: `Perfeito, ${lead?.name?.split(' ')[0] || ''}! Posso montar uma proposta com base no que conversamos. Você confirma o interesse em ${lead?.interest || 'nossa solução'} para eu seguir com os próximos passos?`,
+    agendar: `Posso agendar o próximo passo com você. Você prefere amanhã às 10h ou às 15h? Se outro horário for melhor, me diga.`,
+    recuperar: `Oi ${lead?.name?.split(' ')[0] || ''}, passando para retomar nossa conversa sobre ${lead?.interest || 'sua necessidade'}. Ainda faz sentido eu te ajudar com isso?`,
+  };
+
+  async function sendAI(textOverride, playbook) {
     if (!lead || typing) return;
     setAiError('');
-    const fallback = (textOverride || suggestions[0] || '').trim();
+    const fallback = (textOverride || (playbook && playbookFallbacks[playbook]) || suggestions[0] || '').trim();
     const useApi = !textOverride && isNvidiaConfigured(settings);
 
     if (!useApi) {
@@ -78,6 +87,7 @@ export default function Conversations() {
       typingTimer.current = setTimeout(() => {
         sendMessage(lead.id, { from: 'ia', text, time: timeNow() });
         if (lead.status === 'Novo') updateLeadStatus(lead.id, 'Em atendimento');
+        if (playbook) recordEvent(lead.id, { type: 'playbook', text: `Playbook IA: ${playbook}` });
         setTyping(false);
       }, 700);
       return;
@@ -93,9 +103,11 @@ export default function Conversations() {
         conversations: conversations[lead.id] || [],
         settings,
         signal: controller.signal,
+        playbook,
       });
       sendMessage(lead.id, { from: 'ia', text, time: timeNow() });
       if (lead.status === 'Novo') updateLeadStatus(lead.id, 'Em atendimento');
+      if (playbook) recordEvent(lead.id, { type: 'playbook', text: `Playbook IA: ${playbook}` });
     } catch (err) {
       if (err?.name === 'AbortError') return;
       setAiError(err?.message || 'Falha ao gerar resposta com NVIDIA.');
@@ -108,6 +120,7 @@ export default function Conversations() {
     if (!lead || typing || simulating) return;
     setAiError('');
     setSimulating(true);
+    recordEvent(lead.id, { type: 'simulation', text: 'Simulação de negociação IA iniciada' });
     const useApi = isNvidiaConfigured(settings);
     let conv = [...(conversations[lead.id] || [])];
     const delay = (ms) => new Promise(r => setTimeout(r, ms));
@@ -172,6 +185,7 @@ export default function Conversations() {
         setTyping(false);
         await delay(800);
       }
+      recordEvent(lead.id, { type: 'simulation', text: 'Simulação de negociação IA concluída' });
     } catch (err) {
       if (err?.name !== 'AbortError') setAiError(err?.message || 'Falha na simulação.');
     } finally {
@@ -184,6 +198,7 @@ export default function Conversations() {
     if (!lead) return;
     sendMessage(lead.id, { from: 'ia', text: 'Vou encaminhar você para um consultor humano continuar o atendimento. Um momento, por favor.', time: timeNow() });
     updateLeadStatus(lead.id, 'Em atendimento');
+    recordEvent(lead.id, { type: 'handoff', text: 'Handoff para atendimento humano' });
   }
 
   return (
@@ -221,6 +236,7 @@ export default function Conversations() {
                   <div style={{ fontSize: 13, color: 'var(--mute)' }}>{lead.channel} · {lead.interest} · <span className="badge blue">{lead.status}</span></div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button className="btn btn-sm btn-outline" onClick={() => setShowTimeline(true)}><History size={14} /> Timeline</button>
                   <button className="btn btn-sm btn-outline" onClick={handoff}><UserCheck size={14} /> Handoff humano</button>
                   <button className="btn btn-sm btn-outline" onClick={() => sendAI()} disabled={typing || simulating}><Sparkles size={14} /> {isNvidiaConfigured(settings) ? 'Gerar resposta IA (NVIDIA)' : 'Simular resposta IA'}</button>
                   <button className="btn btn-sm btn-primary" onClick={simulateNegotiation} disabled={typing || simulating}><Zap size={14} /> {simulating ? 'Simulando...' : 'Simular negociação IA'}</button>
@@ -267,6 +283,22 @@ export default function Conversations() {
 
               <div style={{ padding: 14, borderTop: '1px solid var(--line)', display: 'grid', gap: 10 }}>
                 <div>
+                  <div style={{ fontSize: 12, color: 'var(--mute)', display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}><Sparkles size={13} /> Playbooks IA</div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {[
+                      ['qualificar', 'Qualificar'],
+                      ['objeção', 'Contornar objeção'],
+                      ['proposta', 'Enviar proposta'],
+                      ['agendar', 'Agendar'],
+                      ['recuperar', 'Recuperar lead'],
+                    ].map(([key, label]) => (
+                      <button key={key} className="btn btn-sm btn-outline" style={{ fontSize: 12 }} disabled={typing || simulating} onClick={() => sendAI(undefined, key)}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
                   <div style={{ fontSize: 12, color: 'var(--mute)', display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}><Lightbulb size={13} /> Sugestões da IA</div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     {suggestions.map((s, i) => (
@@ -285,6 +317,39 @@ export default function Conversations() {
           ) : <div style={{ padding: 24, color: 'var(--mute)' }}>Selecione um lead.</div>}
         </div>
       </div>
+      {showTimeline && lead && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,12,.55)', display: 'flex', justifyContent: 'flex-end', zIndex: 60 }} onClick={() => setShowTimeline(false)}>
+          <div className="card" onClick={(e) => e.stopPropagation()} style={{ width: 'min(520px, 100%)', height: '100%', borderRadius: '16px 0 0 16px', padding: 24, overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 16 }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: 22 }}>Timeline do lead</h2>
+                <div style={{ color: 'var(--mute)', fontSize: 13 }}>{lead.name} · {lead.channel}</div>
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowTimeline(false)}><X size={18} /></button>
+            </div>
+            <div style={{ display: 'grid', gap: 10 }}>
+              {(() => {
+                const toMin = (t) => { const m = /^([0-9]{1,2}):([0-9]{2})$/.exec(t || ''); return m ? (+m[1]) * 60 + (+m[2]) : -1; };
+                const ev = (leadEvents[lead.id] || []).map((e, i) => ({ kind: 'event', i, time: e.time || '', text: e.text, type: e.type || 'event' }));
+                const msg = (conversations[lead.id] || []).map((m, i) => ({ kind: 'msg', i, time: m.time || '', text: m.text, from: m.from }));
+                const all = [...ev, ...msg].sort((a, b) => { const ta = toMin(a.time), tb = toMin(b.time); if (ta === -1 && tb === -1) return 0; if (ta === -1) return -1; if (tb === -1) return 1; return ta - tb || (a.kind === 'event' ? -1 : 1); });
+                if (all.length === 0) return <div style={{ color: 'var(--mute)', fontSize: 14 }}>Sem atividades registradas.</div>;
+                return all.map((item, idx) => (
+                  <div key={idx} style={{ padding: 12, border: '1px solid var(--line)', borderRadius: 10, background: item.kind === 'event' ? 'rgba(255,255,255,.03)' : 'rgba(255,255,255,.02)' }}>
+                    <div style={{ fontSize: 12, color: 'var(--mute)', marginBottom: 4 }}>
+                      {item.kind === 'event'
+                        ? `${item.type === 'status' ? 'Status' : item.type === 'handoff' ? 'Handoff' : item.type === 'simulation' ? 'Simulação' : item.type === 'playbook' ? 'Playbook' : item.type === 'ia' ? 'IA' : 'Evento'} · ${item.time}`
+                        : `${item.from === 'client' ? 'Cliente' : item.from === 'ia' ? 'LeadIA' : 'Consultor'} · ${item.time}`}
+                    </div>
+                    <div style={{ fontSize: 14 }}>{item.text}</div>
+                  </div>
+                ));
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`@media (max-width: 900px){ .app-main .card[style*="grid-template-columns: 320px"]{grid-template-columns:1fr !important;grid-template-rows:auto minmax(0,1fr) !important;height:min(82vh,760px) !important;min-height:520px !important} .app-main .card[style*="grid-template-columns: 320px"] > div:first-child{max-height:220px;border-right:0 !important;border-bottom:1px solid var(--line)} }`}</style>
     </div>
   );
