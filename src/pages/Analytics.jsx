@@ -1,6 +1,9 @@
-import { useMemo } from 'react';
-import { BarChart3, TrendingUp, Clock, DollarSign, MessageSquare, AlertCircle } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { BarChart3, TrendingUp, Clock, DollarSign, MessageSquare, AlertCircle, Activity } from 'lucide-react';
+import { ResponsiveContainer, BarChart, Bar, LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { useApp } from '../context/AppContext';
+
+const COLORS = ['#FF5A52', '#60A5FA', '#34D399', '#FBBF24', '#A78BFA', '#F472B6'];
 
 function Kpi({ icon: Icon, label, value, note, color }) {
   return (
@@ -17,27 +20,44 @@ function Kpi({ icon: Icon, label, value, note, color }) {
   );
 }
 
-function Bars({ items, valueKey = 'value', labelKey = 'label', color = 'var(--acc)', suffix = '' }) {
-  const max = Math.max(1, ...items.map(i => i[valueKey]));
+const tooltipStyle = {
+  contentStyle: { background: '#151F2B', border: '1px solid #344B63', borderRadius: 10, color: '#F1F5F9' },
+  itemStyle: { color: '#F1F5F9' },
+  labelStyle: { color: '#94A3B3' },
+  cursor: { fill: 'rgba(255,255,255,0.04)' },
+};
+
+function ChartTypeSwitch({ value, onChange, options }) {
   return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      {items.map((it) => (
-        <div key={it[labelKey]}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
-            <span>{it[labelKey]}</span>
-            <span style={{ color: 'var(--mute)' }}>{it[valueKey]}{suffix}{it.extra ? ` · ${it.extra}` : ''}</span>
-          </div>
-          <div style={{ height: 10, background: 'var(--bg-alt)', borderRadius: 999, overflow: 'hidden' }}>
-            <div style={{ width: `${(it[valueKey] / max) * 100}%`, height: '100%', background: it.color || color, borderRadius: 999 }} />
-          </div>
-        </div>
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      {options.map(o => (
+        <button key={o.value} className={`btn btn-sm ${value === o.value ? 'btn-primary' : 'btn-outline'}`} onClick={() => onChange(o.value)} style={{ padding: '6px 10px', fontSize: 12 }}>
+          {o.label}
+        </button>
       ))}
+    </div>
+  );
+}
+
+function ChartCard({ title, icon: Icon, type, setType, options, children, note }) {
+  return (
+    <div className="card" style={{ padding: 22 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 14, flexWrap: 'wrap' }}>
+        <h2 style={{ margin: 0, fontSize: 20, display: 'flex', gap: 8, alignItems: 'center' }}><Icon size={18} color="var(--acc)" /> {title}</h2>
+        <ChartTypeSwitch value={type} onChange={setType} options={options} />
+      </div>
+      <div style={{ width: '100%', height: 300 }}>{children}</div>
+      {note && <div style={{ marginTop: 12, fontSize: 13, color: 'var(--mute)' }}>{note}</div>}
     </div>
   );
 }
 
 export default function Analytics() {
   const { leads } = useApp();
+  const [funnelType, setFunnelType] = useState('bar');
+  const [channelType, setChannelType] = useState('pie');
+  const [lossType, setLossType] = useState('bar');
+  const [trendType, setTrendType] = useState('area');
 
   const data = useMemo(() => {
     const total = leads.length || 1;
@@ -49,21 +69,29 @@ export default function Analytics() {
     const taxa = Math.round((convertidos.length / total) * 100);
     const avgScore = Math.round(leads.reduce((a, b) => a + (b.score || 50), 0) / total);
 
-    const funnelStages = ['Novo', 'Em atendimento', 'Qualificado', 'Proposta', 'Convertido'];
-    const funnel = funnelStages.map(s => ({ label: s, value: leads.filter(l => l.status === s).length }));
+    const funnel = ['Novo', 'Em atendimento', 'Qualificado', 'Proposta', 'Convertido'].map((s, i) => ({
+      etapa: s, leads: leads.filter(l => l.status === s).length, fill: COLORS[i % COLORS.length]
+    }));
 
-    const channels = ['Instagram', 'WhatsApp'].map(c => {
+    const channels = ['Instagram', 'WhatsApp'].map((c) => {
       const ls = leads.filter(l => l.channel === c);
-      const conv = ls.filter(l => l.status === 'Convertido').length;
-      return { label: c, value: ls.length, extra: `${conv} convertido(s)`, color: c === 'Instagram' ? '#FF5A52' : '#34D399' };
+      return { canal: c, leads: ls.length, convertidos: ls.filter(l => l.status === 'Convertido').length, receita: ls.filter(l => l.status === 'Convertido').reduce((a, b) => a + (b.value || 0), 0) };
     });
+    const pieChannels = channels.map((c, i) => ({ name: c.canal, value: c.leads, fill: COLORS[i] }));
 
     const reasonsMap = {};
     perdidos.forEach(l => { const r = l.lossReason || 'Não informado'; reasonsMap[r] = (reasonsMap[r] || 0) + 1; });
-    const reasons = Object.entries(reasonsMap).map(([label, value]) => ({ label, value }));
-    if (reasons.length === 0) reasons.push({ label: 'Nenhuma perda registrada', value: 0 });
+    const reasons = Object.entries(reasonsMap).map(([motivo, valor], i) => ({ motivo, valor, fill: COLORS[i % COLORS.length] }));
+    if (reasons.length === 0) reasons.push({ motivo: 'Nenhuma perda', valor: 0, fill: '#34D399' });
 
-    return { total: leads.length, convertidos: convertidos.length, perdidos: perdidos.length, receita, potencial, taxa, avgScore, funnel, channels, reasons };
+    const trend = [
+      { semana: 'Sem 1', leads: Math.max(1, Math.round(total * 0.4)), convertidos: 0, receita: 0 },
+      { semana: 'Sem 2', leads: Math.max(1, Math.round(total * 0.6)), convertidos: Math.max(0, Math.round(convertidos.length * 0.3)), receita: Math.round(receita * 0.2) },
+      { semana: 'Sem 3', leads: Math.max(2, Math.round(total * 0.8)), convertidos: Math.max(0, Math.round(convertidos.length * 0.6)), receita: Math.round(receita * 0.6) },
+      { semana: 'Sem 4', leads: total, convertidos: convertidos.length, receita },
+    ];
+
+    return { total: leads.length, convertidos: convertidos.length, receita, potencial, taxa, avgScore, funnel, channels, pieChannels, reasons, trend };
   }, [leads]);
 
   return (
@@ -71,7 +99,7 @@ export default function Analytics() {
       <div className="page-head">
         <div>
           <h1>Analytics</h1>
-          <p>Inteligência comercial para entender desempenho, conversão e oportunidades.</p>
+          <p>Inteligência comercial com gráficos interativos para apresentar resultados e oportunidades.</p>
         </div>
       </div>
 
@@ -83,36 +111,139 @@ export default function Analytics() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr .8fr', gap: 16, marginBottom: 16 }}>
-        <div className="card" style={{ padding: 22 }}>
-          <h2 style={{ margin: '0 0 16px', fontSize: 20, display: 'flex', gap: 8, alignItems: 'center' }}><TrendingUp size={18} color="var(--acc)" /> Funil por etapa</h2>
-          <Bars items={data.funnel} suffix=" lead(s)" />
-        </div>
-        <div className="card" style={{ padding: 22 }}>
-          <h2 style={{ margin: '0 0 16px', fontSize: 20, display: 'flex', gap: 8, alignItems: 'center' }}><MessageSquare size={18} color="var(--acc)" /> Desempenho por canal</h2>
-          <Bars items={data.channels} suffix=" lead(s)" />
-          <div style={{ marginTop: 18, padding: 14, background: 'var(--bg-alt)', borderRadius: 12, fontSize: 13, color: 'var(--mute)' }}>
-            <strong style={{ color: 'var(--ink)' }}>Insight:</strong> priorize o canal com maior volume e teste scripts de follow-up no canal com menor conversão.
-          </div>
-        </div>
+        <ChartCard title="Funil comercial" icon={TrendingUp} type={funnelType} setType={setFunnelType} options={[{ value: 'bar', label: 'Barras' }, { value: 'area', label: 'Área' }, { value: 'line', label: 'Linha' }]} note="Passe o mouse nos pontos/barras para ver detalhes.">
+          <ResponsiveContainer width="100%" height="100%">
+            {funnelType === 'bar' ? (
+              <BarChart data={data.funnel} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#243447" />
+                <XAxis dataKey="etapa" stroke="#94A3B3" fontSize={12} />
+                <YAxis stroke="#94A3B3" fontSize={12} allowDecimals={false} />
+                <Tooltip {...tooltipStyle} />
+                <Bar dataKey="leads" name="Leads" radius={[8, 8, 0, 0]}>
+                  {data.funnel.map((e, i) => <Cell key={i} fill={e.fill} />)}
+                </Bar>
+              </BarChart>
+            ) : funnelType === 'area' ? (
+              <AreaChart data={data.funnel} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs><linearGradient id="funnelG" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#FF5A52" stopOpacity={0.45} /><stop offset="95%" stopColor="#FF5A52" stopOpacity={0} /></linearGradient></defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#243447" />
+                <XAxis dataKey="etapa" stroke="#94A3B3" fontSize={12} />
+                <YAxis stroke="#94A3B3" fontSize={12} allowDecimals={false} />
+                <Tooltip {...tooltipStyle} />
+                <Area type="monotone" dataKey="leads" name="Leads" stroke="#FF5A52" fill="url(#funnelG)" strokeWidth={3} />
+              </AreaChart>
+            ) : (
+              <LineChart data={data.funnel} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#243447" />
+                <XAxis dataKey="etapa" stroke="#94A3B3" fontSize={12} />
+                <YAxis stroke="#94A3B3" fontSize={12} allowDecimals={false} />
+                <Tooltip {...tooltipStyle} />
+                <Line type="monotone" dataKey="leads" name="Leads" stroke="#FF5A52" strokeWidth={3} dot={{ r: 5 }} activeDot={{ r: 7 }} />
+              </LineChart>
+            )}
+          </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard title="Canais" icon={MessageSquare} type={channelType} setType={setChannelType} options={[{ value: 'pie', label: 'Pizza' }, { value: 'bar', label: 'Barras' }]}>
+          <ResponsiveContainer width="100%" height="100%">
+            {channelType === 'pie' ? (
+              <PieChart>
+                <Pie data={data.pieChannels} dataKey="value" nameKey="name" innerRadius={65} outerRadius={100} paddingAngle={4} label>
+                  {data.pieChannels.map((e, i) => <Cell key={i} fill={e.fill} />)}
+                </Pie>
+                <Tooltip {...tooltipStyle} />
+                <Legend />
+              </PieChart>
+            ) : (
+              <BarChart data={data.channels} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#243447" />
+                <XAxis dataKey="canal" stroke="#94A3B3" fontSize={12} />
+                <YAxis stroke="#94A3B3" fontSize={12} allowDecimals={false} />
+                <Tooltip {...tooltipStyle} />
+                <Legend />
+                <Bar dataKey="leads" name="Leads" fill="#60A5FA" radius={[8,8,0,0]} />
+                <Bar dataKey="convertidos" name="Convertidos" fill="#34D399" radius={[8,8,0,0]} />
+              </BarChart>
+            )}
+          </ResponsiveContainer>
+        </ChartCard>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        <div className="card" style={{ padding: 22 }}>
-          <h2 style={{ margin: '0 0 16px', fontSize: 20, display: 'flex', gap: 8, alignItems: 'center' }}><AlertCircle size={18} color="var(--acc)" /> Motivos de perda</h2>
-          <Bars items={data.reasons} suffix=" caso(s)" color="#FBBF24" />
-        </div>
-        <div className="card" style={{ padding: 22 }}>
-          <h2 style={{ margin: '0 0 16px', fontSize: 20 }}>Recomendações da IA</h2>
-          <div style={{ display: 'grid', gap: 10 }}>
-            {[
-              'Responder leads novos em até 1 minuto aumenta a chance de qualificação.',
-              'Leads com objeção de preço devem receber opção de parcelamento ou âncora de valor.',
-              'Leads em “Proposta” há mais de 24h devem entrar em sequência de follow-up.',
-              'Registrar motivo de perda ajuda a treinar o script comercial e melhorar conversão.',
-            ].map((t, i) => (
-              <div key={i} style={{ padding: 12, border: '1px solid var(--line)', borderRadius: 10, fontSize: 14, color: 'var(--mute)', background: 'rgba(255,255,255,.02)' }}>{t}</div>
-            ))}
-          </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+        <ChartCard title="Motivos de perda" icon={AlertCircle} type={lossType} setType={setLossType} options={[{ value: 'bar', label: 'Barras' }, { value: 'pie', label: 'Pizza' }]}>
+          <ResponsiveContainer width="100%" height="100%">
+            {lossType === 'bar' ? (
+              <BarChart data={data.reasons} layout="vertical" margin={{ top: 10, right: 20, left: 20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#243447" />
+                <XAxis type="number" stroke="#94A3B3" fontSize={12} allowDecimals={false} />
+                <YAxis type="category" dataKey="motivo" stroke="#94A3B3" fontSize={12} width={120} />
+                <Tooltip {...tooltipStyle} />
+                <Bar dataKey="valor" name="Casos" fill="#FBBF24" radius={[0,8,8,0]} />
+              </BarChart>
+            ) : (
+              <PieChart>
+                <Pie data={data.reasons} dataKey="valor" nameKey="motivo" outerRadius={100} label>
+                  {data.reasons.map((e, i) => <Cell key={i} fill={e.fill || COLORS[i % COLORS.length]} />)}
+                </Pie>
+                <Tooltip {...tooltipStyle} />
+                <Legend />
+              </PieChart>
+            )}
+          </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard title="Evolução simulada" icon={Activity} type={trendType} setType={setTrendType} options={[{ value: 'area', label: 'Área' }, { value: 'line', label: 'Linha' }, { value: 'bar', label: 'Barras' }]} note="Dados simulados para demonstração de tendência ao longo das semanas.">
+          <ResponsiveContainer width="100%" height="100%">
+            {trendType === 'bar' ? (
+              <BarChart data={data.trend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#243447" />
+                <XAxis dataKey="semana" stroke="#94A3B3" fontSize={12} />
+                <YAxis stroke="#94A3B3" fontSize={12} allowDecimals={false} />
+                <Tooltip {...tooltipStyle} />
+                <Legend />
+                <Bar dataKey="leads" name="Leads" fill="#60A5FA" radius={[8,8,0,0]} />
+                <Bar dataKey="convertidos" name="Convertidos" fill="#34D399" radius={[8,8,0,0]} />
+              </BarChart>
+            ) : trendType === 'line' ? (
+              <LineChart data={data.trend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#243447" />
+                <XAxis dataKey="semana" stroke="#94A3B3" fontSize={12} />
+                <YAxis stroke="#94A3B3" fontSize={12} allowDecimals={false} />
+                <Tooltip {...tooltipStyle} />
+                <Legend />
+                <Line type="monotone" dataKey="leads" name="Leads" stroke="#60A5FA" strokeWidth={3} dot={{ r: 4 }} />
+                <Line type="monotone" dataKey="convertidos" name="Convertidos" stroke="#34D399" strokeWidth={3} dot={{ r: 4 }} />
+              </LineChart>
+            ) : (
+              <AreaChart data={data.trend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="gLeads" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#60A5FA" stopOpacity={0.35} /><stop offset="95%" stopColor="#60A5FA" stopOpacity={0} /></linearGradient>
+                  <linearGradient id="gConv" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#34D399" stopOpacity={0.35} /><stop offset="95%" stopColor="#34D399" stopOpacity={0} /></linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#243447" />
+                <XAxis dataKey="semana" stroke="#94A3B3" fontSize={12} />
+                <YAxis stroke="#94A3B3" fontSize={12} allowDecimals={false} />
+                <Tooltip {...tooltipStyle} />
+                <Legend />
+                <Area type="monotone" dataKey="leads" name="Leads" stroke="#60A5FA" fill="url(#gLeads)" strokeWidth={3} />
+                <Area type="monotone" dataKey="convertidos" name="Convertidos" stroke="#34D399" fill="url(#gConv)" strokeWidth={3} />
+              </AreaChart>
+            )}
+          </ResponsiveContainer>
+        </ChartCard>
+      </div>
+
+      <div className="card" style={{ padding: 22 }}>
+        <h2 style={{ margin: '0 0 16px', fontSize: 20 }}>Recomendações da IA</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 10 }}>
+          {[
+            'Responder leads novos em até 1 minuto aumenta a chance de qualificação.',
+            'Leads com objeção de preço devem receber opção de parcelamento ou âncora de valor.',
+            'Leads em “Proposta” há mais de 24h devem entrar em sequência de follow-up.',
+            'Registrar motivo de perda ajuda a treinar o script comercial e melhorar conversão.',
+          ].map((t, i) => (
+            <div key={i} style={{ padding: 12, border: '1px solid var(--line)', borderRadius: 10, fontSize: 14, color: 'var(--mute)', background: 'rgba(255,255,255,.02)' }}>{t}</div>
+          ))}
         </div>
       </div>
 

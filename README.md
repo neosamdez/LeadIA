@@ -12,7 +12,7 @@ Landing page + painel demo funcional para apresentar a proposta de uma plataform
 - **Landing page**: proposta de valor, problema, como funciona, segmentos, planos, MVP e FAQ.
 - **Painel demo (funcional no front-end)**:
   - Dashboard com métricas simuladas e **funil comercial**
-  - **Analytics**: funil por etapa, desempenho por canal, motivos de perda, score médio e recomendações
+  - **Analytics profissional**: gráficos interativos (Recharts) com troca de tipo (barras/linha/área/pizza), funil, canais, motivos de perda e evolução simulada
   - **Detalhe do lead**: drawer com score de conversão, tags, próxima ação sugerida, motivo de perda e timeline
   - **Conversas com IA mais realista**: sugestões contextuais, detecção de objeção, typing indicator e handoff humano
   - **Cenários prontos** para apresentação (novo lead, objeção de preço, conversão)
