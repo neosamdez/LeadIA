@@ -1,7 +1,7 @@
 .app-shell { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
 .sidebar {
-  background: #13222C; color: #E8F0EC; padding: 24px 16px;
-  display: flex; flex-direction: column; border-right: 1px solid rgba(255,255,255,.06);
+  background: linear-gradient(180deg, #111B26 0%, #0D151E 100%); color: #E8F0EC; padding: 24px 16px;
+  display: flex; flex-direction: column; border-right: 1px solid var(--line);
   position: sticky; top: 0; height: 100vh;
 }
 .sidebar-brand { display: flex; align-items: center; gap: 10px; font-size: 24px; font-weight: 800; letter-spacing: -.02em; padding: 4px 10px; margin-bottom: 28px; cursor: pointer; }

@@ -25,25 +25,25 @@ export default function Tour() {
   const step = steps[tour.step];
   if (!step) {
     return (
-      <div style={{ position: 'fixed', right: 20, bottom: 20, width: 340, maxWidth: 'calc(100vw - 40px)', background: '#13222C', color: '#fff', borderRadius: 16, padding: 20, boxShadow: '0 20px 50px rgba(0,0,0,.25)', zIndex: 100 }}>
+      <div style={{ position: 'fixed', right: 20, bottom: 20, width: 340, maxWidth: 'calc(100vw - 40px)', background: 'linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)), var(--surf)', color: 'var(--ink)', border: '1px solid var(--line-strong)', borderRadius: 16, padding: 20, boxShadow: '0 20px 50px rgba(0,0,0,.4)', zIndex: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, marginBottom: 8 }}><Compass size={18} color="#FF6A5E" /> Tour concluído</div>
-        <p style={{ margin: '0 0 14px', color: '#B8C9C2', fontSize: 14 }}>Você percorreu o fluxo principal da LeadIA. Agora você pode usar os cenários prontos no Dashboard para demonstrar ao vivo.</p>
+        <p style={{ margin: '0 0 14px', color: 'var(--mute)', fontSize: 14 }}>Você percorreu o fluxo principal da LeadIA. Agora você pode usar os cenários prontos no Dashboard para demonstrar ao vivo.</p>
         <button className="btn btn-primary btn-sm" onClick={endTour}>Fechar</button>
       </div>
     );
   }
 
   return (
-    <div style={{ position: 'fixed', right: 20, bottom: 20, width: 360, maxWidth: 'calc(100vw - 40px)', background: '#13222C', color: '#fff', borderRadius: 16, padding: 20, boxShadow: '0 20px 50px rgba(0,0,0,.25)', zIndex: 100 }}>
+    <div style={{ position: 'fixed', right: 20, bottom: 20, width: 360, maxWidth: 'calc(100vw - 40px)', background: 'linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)), var(--surf)', color: 'var(--ink)', border: '1px solid var(--line-strong)', borderRadius: 16, padding: 20, boxShadow: '0 20px 50px rgba(0,0,0,.4)', zIndex: 100 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
-        <div style={{ fontSize: 12, color: '#9DB0A8', fontWeight: 600 }}>TOUR GUIADO · {tour.step + 1}/{steps.length}</div>
-        <button onClick={endTour} style={{ background: 'transparent', border: 0, color: '#9DB0A8', cursor: 'pointer' }} aria-label="Fechar tour"><X size={16} /></button>
+        <div style={{ fontSize: 12, color: 'var(--mute)', fontWeight: 600 }}>TOUR GUIADO · {tour.step + 1}/{steps.length}</div>
+        <button onClick={endTour} style={{ background: 'transparent', border: 0, color: 'var(--mute)', cursor: 'pointer' }} aria-label="Fechar tour"><X size={16} /></button>
       </div>
       <div style={{ fontSize: 20, fontWeight: 800, margin: '6px 0 6px' }}>{step.title}</div>
-      <p style={{ margin: '0 0 16px', color: '#B8C9C2', fontSize: 14, lineHeight: 1.5 }}>{step.text}</p>
+      <p style={{ margin: '0 0 16px', color: 'var(--mute)', fontSize: 14, lineHeight: 1.5 }}>{step.text}</p>
       <div style={{ display: 'flex', gap: 8 }}>
         <button className="btn btn-primary btn-sm" onClick={nextTour}>{tour.step === steps.length - 1 ? 'Concluir' : 'Próximo'} <ArrowRight size={14} /></button>
-        <button className="btn btn-ghost btn-sm" onClick={endTour} style={{ color: '#B8C9C2' }}>Pular</button>
+        <button className="btn btn-ghost btn-sm" onClick={endTour} style={{ color: 'var(--mute)' }}>Pular</button>
       </div>
     </div>
   );

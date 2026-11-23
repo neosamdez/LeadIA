@@ -71,9 +71,9 @@ export default function Settings() {
             <p style={{ margin: '0 0 14px', fontSize: 14, color: 'var(--mute)' }}>Restaura leads, conversas e configurações para o estado inicial.</p>
             <button className="btn btn-outline" onClick={() => { if (confirm('Resetar dados da demonstração?')) resetDemo(); }}><RotateCcw size={16} /> Resetar dados</button>
           </div>
-          <div className="card" style={{ padding: 24, background: '#13222C', color: '#E8F0EC', borderColor: '#13222C' }}>
-            <h2 style={{ margin: '0 0 8px', fontSize: 20, color: '#fff' }}>Modo apresentação</h2>
-            <p style={{ margin: 0, fontSize: 14, color: '#B8C9C2' }}>Este projeto usa dados simulados em localStorage. Ideal para apresentar o fluxo comercial da LeadIA sem depender de APIs externas.</p>
+          <div className="card" style={{ padding: 24, background: 'linear-gradient(135deg, rgba(255,90,82,.18), rgba(96,165,250,.08))', borderColor: 'rgba(255,90,82,.25)' }}>
+            <h2 style={{ margin: '0 0 8px', fontSize: 20, color: 'var(--ink)' }}>Modo apresentação</h2>
+            <p style={{ margin: 0, fontSize: 14, color: 'var(--mute)' }}>Este projeto usa dados simulados em localStorage. Ideal para apresentar o fluxo comercial da LeadIA sem depender de APIs externas.</p>
           </div>
         </div>
       </div>

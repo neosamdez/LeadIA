@@ -226,7 +226,7 @@ export default function Landing() {
               <h2>Pronto para ver a LeadIA em ação?</h2>
               <p>Entre na lista de acesso antecipado ou abra o painel demo para explorar o fluxo comercial completo.</p>
               <form onSubmit={submit} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 20 }}>
-                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com.br" aria-label="Seu e-mail" style={{ flex: '1 1 240px', border: '1.5px solid #2A3D47', background: '#172630', color: '#fff' }} />
+                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com.br" aria-label="Seu e-mail" style={{ flex: '1 1 240px', border: '1px solid var(--line-strong)', background: 'rgba(255,255,255,0.04)', color: 'var(--ink)' }} />
                 <button className="btn btn-primary" type="submit">Entrar na lista</button>
               </form>
               {ok && <div style={{ marginTop: 12, color: '#4CD08A', fontWeight: 600, display: 'flex', gap: 8, alignItems: 'center' }}><CheckCircle2 size={16} /> {ok}</div>}

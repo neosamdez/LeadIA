@@ -100,10 +100,10 @@ export default function Dashboard() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 16, marginBottom: 24 }}>
-        <Stat icon={Users} label="Leads recebidos" value={stats.total} note={`${stats.emAberto} em aberto`} color={{ bg: '#E8F0FE', fg: '#2563EB' }} />
-        <Stat icon={MessageSquare} label="Atendimentos" value={stats.total} note="Resposta imediata da IA" color={{ bg: '#DDF3E5', fg: '#1C9E5A' }} />
-        <Stat icon={TrendingUp} label="Taxa de conversão" value={`${stats.taxa}%`} note={`${stats.convertidos} convertidos`} color={{ bg: '#FFF3DB', fg: '#C47A12' }} />
-        <Stat icon={DollarSign} label="Receita gerada" value={`R$ ${stats.receita}`} note="No período simulado" color={{ bg: '#FDE8E6', fg: '#E8453C' }} />
+        <Stat icon={Users} label="Leads recebidos" value={stats.total} note={`${stats.emAberto} em aberto`} color={{ bg: 'rgba(96,165,250,.14)', fg: '#93C5FD' }} />
+        <Stat icon={MessageSquare} label="Atendimentos" value={stats.total} note="Resposta imediata da IA" color={{ bg: 'rgba(52,211,153,.14)', fg: '#6EE7B7' }} />
+        <Stat icon={TrendingUp} label="Taxa de conversão" value={`${stats.taxa}%`} note={`${stats.convertidos} convertidos`} color={{ bg: 'rgba(251,191,36,.14)', fg: '#FCD34D' }} />
+        <Stat icon={DollarSign} label="Receita gerada" value={`R$ ${stats.receita}`} note="No período simulado" color={{ bg: 'rgba(255,90,82,.14)', fg: '#FF8A84' }} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr .8fr', gap: 16, marginBottom: 16 }}>

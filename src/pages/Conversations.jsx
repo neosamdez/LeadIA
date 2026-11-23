@@ -59,7 +59,7 @@ export default function Conversations() {
           <div style={{ padding: 14, borderBottom: '1px solid var(--line)', fontWeight: 700, fontSize: 14, color: 'var(--mute)' }}>Caixa de entrada</div>
           <div style={{ overflowY: 'auto', maxHeight: 560 }}>
             {leads.map(l => (
-              <button key={l.id} onClick={() => pick(l.id)} style={{ width: '100%', textAlign: 'left', padding: 14, border: 0, borderBottom: '1px solid var(--line)', background: l.id === lead?.id ? '#fff' : 'transparent', cursor: 'pointer' }}>
+              <button key={l.id} onClick={() => pick(l.id)} style={{ width: '100%', textAlign: 'left', padding: 14, border: 0, borderBottom: '1px solid var(--line)', background: l.id === lead?.id ? 'var(--surf-3)' : 'transparent', cursor: 'pointer' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                   <strong style={{ fontSize: 14, color: 'var(--ink)' }}>{l.name}</strong>
                   <span style={{ fontSize: 12, color: 'var(--mute)' }}>{l.time}</span>
@@ -82,7 +82,7 @@ export default function Conversations() {
                 <button className="btn btn-sm btn-outline" onClick={sendAI}><Sparkles size={14} /> Simular resposta IA</button>
               </div>
 
-              <div style={{ flex: 1, padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, background: '#FBFDFC' }}>
+              <div style={{ flex: 1, padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, background: 'var(--bg-alt)' }}>
                 {msgs.length === 0 && <div style={{ color: 'var(--mute)', fontSize: 14 }}>Nenhuma mensagem ainda. Envie a primeira mensagem.</div>}
                 {msgs.map((m, i) => {
                   const isClient = m.from === 'client';
@@ -92,7 +92,7 @@ export default function Conversations() {
                       <div style={{
                         padding: '10px 13px', borderRadius: 16,
                         borderBottomLeftRadius: isClient ? 4 : 16, borderBottomRightRadius: isClient ? 16 : 4,
-                        background: isClient ? '#F4F7F5' : isIA ? 'var(--wa-bg)' : '#E8F0FE',
+                        background: isClient ? 'var(--surf-3)' : isIA ? 'var(--wa-bg)' : 'var(--blue-bg)',
                         color: 'var(--ink)', fontSize: 14, lineHeight: 1.45
                       }}>
                         {m.text}
