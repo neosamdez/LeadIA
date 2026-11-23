@@ -195,10 +195,10 @@ export default function Conversations() {
         </div>
       </div>
 
-      <div className="card" style={{ display: 'grid', gridTemplateColumns: '320px 1fr', minHeight: 600, overflow: 'hidden' }}>
-        <div style={{ borderRight: '1px solid var(--line)', background: 'var(--surf-2)' }}>
+      <div className="card" style={{ display: 'grid', gridTemplateColumns: '320px 1fr', height: 'min(72vh, 720px)', minHeight: 560, overflow: 'hidden' }}>
+        <div style={{ borderRight: '1px solid var(--line)', background: 'var(--surf-2)', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
           <div style={{ padding: 14, borderBottom: '1px solid var(--line)', fontWeight: 700, fontSize: 14, color: 'var(--mute)' }}>Caixa de entrada</div>
-          <div style={{ overflowY: 'auto', maxHeight: 600 }}>
+          <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
             {leads.map(l => (
               <button key={l.id} onClick={() => pick(l.id)} style={{ width: '100%', textAlign: 'left', padding: 14, border: 0, borderBottom: '1px solid var(--line)', background: l.id === lead?.id ? 'var(--surf-3)' : 'transparent', cursor: 'pointer' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
@@ -212,7 +212,7 @@ export default function Conversations() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0, overflow: 'hidden' }}>
           {lead ? (
             <>
               <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -285,7 +285,7 @@ export default function Conversations() {
           ) : <div style={{ padding: 24, color: 'var(--mute)' }}>Selecione um lead.</div>}
         </div>
       </div>
-      <style>{`@media (max-width: 900px){ .app-main .card[style*="grid-template-columns: 320px"]{grid-template-columns:1fr !important} .app-main .card[style*="grid-template-columns: 320px"] > div:first-child{max-height:260px;border-right:0 !important;border-bottom:1px solid var(--line)} }`}</style>
+      <style>{`@media (max-width: 900px){ .app-main .card[style*="grid-template-columns: 320px"]{grid-template-columns:1fr !important;grid-template-rows:auto minmax(0,1fr) !important;height:min(82vh,760px) !important;min-height:520px !important} .app-main .card[style*="grid-template-columns: 320px"] > div:first-child{max-height:220px;border-right:0 !important;border-bottom:1px solid var(--line)} }`}</style>
     </div>
   );
 }

@@ -84,9 +84,11 @@ button { cursor: pointer; }
 .section-lead { color: var(--mute); font-size: 18px; max-width: 62ch; margin: 0; }
 
 input, select, textarea {
-  width: 100%; padding: 12px 14px; border-radius: 12px;
+  width: 100%; padding: 10px 12px; border-radius: 10px;
   border: 1px solid var(--line-strong); background: rgba(255,255,255,0.03); color: var(--ink);
+  font-size: 14px; line-height: 1.4;
 }
+select { height: 42px; min-height: 42px; padding: 8px 12px; }
 input::placeholder, textarea::placeholder { color: #7C8EA0; }
 input:focus, select:focus, textarea:focus {
   outline: 3px solid rgba(255,90,82,.18); border-color: rgba(255,90,82,.55);

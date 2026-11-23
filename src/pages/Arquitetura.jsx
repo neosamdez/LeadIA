@@ -24,11 +24,11 @@ export default function Arquitetura() {
           {flow.map((s, i) => {
             const Icon = s.icon;
             return (
-              <div key={s.title} style={{ position: 'relative' }}>
-                <div style={{ padding: 16, border: '1px solid var(--line)', borderRadius: 14, background: 'rgba(255,255,255,.02)', height: '100%' }}>
+              <div key={s.title} style={{ position: 'relative', minWidth: 0 }}>
+                <div style={{ padding: 16, border: '1px solid var(--line)', borderRadius: 14, background: 'rgba(255,255,255,.02)', height: '100%', minWidth: 0, overflow: 'hidden' }}>
                   <div style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(255,90,82,.14)', color: '#FF8A84', display: 'grid', placeItems: 'center', marginBottom: 10 }}><Icon size={18} /></div>
-                  <div style={{ fontWeight: 700, marginBottom: 6 }}>{s.title}</div>
-                  <div style={{ fontSize: 13, color: 'var(--mute)', lineHeight: 1.45 }}>{s.desc}</div>
+                  <div style={{ fontWeight: 700, marginBottom: 6, overflowWrap: 'anywhere' }}>{s.title}</div>
+                  <div style={{ fontSize: 13, color: 'var(--mute)', lineHeight: 1.45, overflowWrap: 'anywhere' }}>{s.desc}</div>
                 </div>
                 {i < flow.length - 1 && <div style={{ display: 'none' }}><ArrowRight size={16} /></div>}
               </div>
