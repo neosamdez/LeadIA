@@ -148,6 +148,7 @@ create table if not exists public.goals (
   target_leads integer not null default 0,
   target_conversion numeric(5,2) not null default 0,
   target_response_minutes integer not null default 0,
+  target_revenue numeric(12,2) not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (org_id, period)
@@ -159,7 +160,13 @@ for each row execute function public.set_updated_at();
 -- Configurações por organização
 create table if not exists public.org_settings (
   org_id uuid primary key references public.organizations(id) on delete cascade,
+  company_name text,
+  segment text,
+  tone text,
+  auto_reply boolean not null default true,
+  follow_up boolean not null default true,
   ai_enabled boolean not null default true,
+  use_nvidia_api boolean not null default true,
   nvidia_model text,
   nvidia_proxy_url text,
   created_at timestamptz not null default now(),

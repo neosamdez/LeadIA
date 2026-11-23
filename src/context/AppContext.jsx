@@ -6,7 +6,10 @@ import { onAuthStateChange, signOut } from '../services/auth';
 import { getOrCreateDefaultOrg } from '../services/org';
 import * as leadsService from '../services/leads';
 import * as conversationsService from '../services/conversations';
-import { dbLeadToApp, appLeadToDb, dbMessageToApp } from '../lib/mappers';
+import * as followUpsService from '../services/followUps';
+import * as goalsService from '../services/goals';
+import * as settingsService from '../services/settings';
+import { dbLeadToApp, appLeadToDb, dbMessageToApp, dbFollowUpToApp, appFollowUpToDb } from '../lib/mappers';
 
 const AppContext = createContext(null);
 const STORAGE_KEY = 'leadia_app_v1';
@@ -121,9 +124,12 @@ export function AppProvider({ children }) {
       try {
         const org = await getOrCreateDefaultOrg({ id: state.user.id, email: state.user.email, user_metadata: { company: state.user.company, full_name: state.user.name } });
         if (cancelled) return;
-        const [dbLeads, dbConvs] = await Promise.all([
+        const [dbLeads, dbConvs, dbFollowUps, dbGoals, dbSettings] = await Promise.all([
           leadsService.listLeads(org.id),
           conversationsService.listConversations(org.id),
+          followUpsService.listFollowUps(org.id).catch((e) => { console.error('load followUps', e); return []; }),
+          goalsService.getGoals(org.id).catch((e) => { console.error('load goals', e); return null; }),
+          settingsService.getOrgSettings(org.id).catch((e) => { console.error('load settings', e); return null; }),
         ]);
         if (cancelled) return;
         const leads = (dbLeads || []).map(dbLeadToApp);
@@ -132,7 +138,17 @@ export function AppProvider({ children }) {
           const msgs = (c.messages || []).sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).map(dbMessageToApp);
           conversations[c.lead_id] = msgs;
         }
-        setState((s) => ({ ...s, orgId: org.id, leads, conversations, leadEvents: buildSeedEvents(leads, conversations) }));
+        const followUps = (dbFollowUps || []).map(dbFollowUpToApp);
+        setState((s) => ({
+          ...s,
+          orgId: org.id,
+          leads,
+          conversations,
+          leadEvents: buildSeedEvents(leads, conversations),
+          followUps,
+          goals: dbGoals ? { ...s.goals, ...dbGoals } : s.goals,
+          settings: dbSettings ? { ...s.settings, ...dbSettings, nvidiaApiKey: s.settings.nvidiaApiKey } : s.settings,
+        }));
       } catch (err) {
         console.error('Falha ao carregar dados reais', err);
       }
@@ -188,9 +204,35 @@ export function AppProvider({ children }) {
     },
     dismissAlert: (alertId) => setState((s) => ({ ...s, dismissedAlerts: s.dismissedAlerts.includes(alertId) ? s.dismissedAlerts : [...s.dismissedAlerts, alertId] })),
     clearDismissedAlerts: () => setState((s) => ({ ...s, dismissedAlerts: [] })),
-    addFollowUp: (fu) => setState((s) => ({ ...s, followUps: [{ id: 'fu' + Date.now(), done: false, createdAt: nowTime(), ...fu }, ...s.followUps] })),
-    completeFollowUp: (id) => setState((s) => ({ ...s, followUps: s.followUps.map(f => f.id === id ? { ...f, done: true } : f) })),
-    updateGoals: (patch) => setState((s) => ({ ...s, goals: { ...s.goals, ...patch } })),
+    addFollowUp: (fu) => {
+      const localId = 'fu' + Date.now();
+      const localFu = { id: localId, done: false, createdAt: nowTime(), ...fu };
+      setState((s) => ({ ...s, followUps: [localFu, ...s.followUps] }));
+      if (state.user?.mode === 'real' && state.orgId) {
+        (async () => {
+          try {
+            const created = await followUpsService.createFollowUp(state.orgId, appFollowUpToDb(localFu, state.orgId));
+            const mapped = dbFollowUpToApp(created);
+            setState((s) => ({ ...s, followUps: s.followUps.map((f) => (f.id === localId ? { ...mapped, createdAt: mapped.createdAt || f.createdAt } : f)) }));
+          } catch (e) {
+            console.error('addFollowUp supabase', e);
+          }
+        })();
+      }
+    },
+    completeFollowUp: (id) => {
+      setState((s) => ({ ...s, followUps: s.followUps.map(f => f.id === id ? { ...f, done: true, status: 'done' } : f) }));
+      if (state.user?.mode === 'real' && state.orgId) {
+        followUpsService.updateFollowUp(id, { status: 'done' }).catch((e) => console.error('completeFollowUp supabase', e));
+      }
+    },
+    updateGoals: (patch) => {
+      setState((s) => ({ ...s, goals: { ...s.goals, ...patch } }));
+      if (state.user?.mode === 'real' && state.orgId) {
+        const next = { ...state.goals, ...patch };
+        goalsService.upsertGoals(state.orgId, next).catch((e) => console.error('updateGoals supabase', e));
+      }
+    },
     updateLeadStatus: (id, status) => {
       setState((s) => {
         const prev = s.leads.find(l => l.id === id)?.status;
@@ -259,8 +301,17 @@ export function AppProvider({ children }) {
         })();
       }
     },
-    updateSettings: (patch) => setState((s) => ({ ...s, settings: { ...s.settings, ...patch } })),
+    updateSettings: (patch) => {
+      setState((s) => ({ ...s, settings: { ...s.settings, ...patch } }));
+      if (state.user?.mode === 'real' && state.orgId) {
+        const { nvidiaApiKey: _localOnly, ...safePatch } = patch || {};
+        if (Object.keys(safePatch).length) {
+          settingsService.upsertOrgSettings(state.orgId, safePatch).catch((e) => console.error('updateSettings supabase', e));
+        }
+      }
+    },
     applyPersona: (personaId) => setState((s) => {
+      if (s.user?.mode === 'real') return s;
       const p = personas.find(x => x.id === personaId);
       if (!p) return s;
       const keep = { nvidiaApiKey: s.settings.nvidiaApiKey, nvidiaModel: s.settings.nvidiaModel, nvidiaProxyUrl: s.settings.nvidiaProxyUrl, useNvidiaApi: s.settings.useNvidiaApi };
@@ -275,11 +326,14 @@ export function AppProvider({ children }) {
         settings: { ...s.settings, ...p.settings, ...keep },
       };
     }),
-    resetDemo: () => setState((s) => ({
-      ...defaultState,
-      user: s.user,
-      settings: { ...defaultState.settings, nvidiaApiKey: s.settings.nvidiaApiKey, nvidiaModel: s.settings.nvidiaModel, nvidiaProxyUrl: s.settings.nvidiaProxyUrl, useNvidiaApi: s.settings.useNvidiaApi },
-    })),
+    resetDemo: () => setState((s) => {
+      if (s.user?.mode === 'real') return s;
+      return {
+        ...defaultState,
+        user: s.user,
+        settings: { ...defaultState.settings, nvidiaApiKey: s.settings.nvidiaApiKey, nvidiaModel: s.settings.nvidiaModel, nvidiaProxyUrl: s.settings.nvidiaProxyUrl, useNvidiaApi: s.settings.useNvidiaApi },
+      };
+    }),
     startTour: () => setState((s) => ({ ...s, tour: { active: true, step: 0 } })),
     nextTour: () => setState((s) => ({ ...s, tour: { ...s.tour, step: s.tour.step + 1 } })),
     endTour: () => setState((s) => ({ ...s, tour: { active: false, step: 0 } })),
