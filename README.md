@@ -13,10 +13,13 @@ Landing page + painel demo funcional para apresentar a proposta de uma plataform
 - **Painel demo (funcional no front-end)**:
   - Dashboard com métricas simuladas e **funil comercial**
   - **Analytics profissional**: gráficos interativos (Recharts) com troca de tipo (barras/linha/área/pizza), funil, canais, motivos de perda e evolução simulada
+  - **Pipeline Kanban**: arrastar e soltar leads entre etapas do funil comercial
+  - **Central de Alertas**: leads quentes, propostas pendentes, objeções detectadas e perdas sem motivo
+  - **Arquitetura & LGPD**: fluxo técnico, segurança, APIs oficiais da Meta e conformidade
   - **Detalhe do lead**: drawer com score de conversão, tags, próxima ação sugerida, motivo de perda e timeline
   - **Conversas com IA mais realista**: sugestões contextuais, detecção de objeção, typing indicator e handoff humano
   - **Cenários prontos** para apresentação (novo lead, objeção de preço, conversão)
-  - **Tour guiado** pelo painel (Dashboard → Leads → Conversas → Analytics → Configurações)
+  - **Tour guiado** pelo painel
   - **Resumo executivo** em modal (demo) e seção na landing
   - Gestão de leads (filtro, status, criação)
   - Configurações da empresa/IA
@@ -81,11 +84,13 @@ src/
 ### 2. Melhorias de produto (experiência do usuário)
 
 - [x] **Funil visual**: gráfico de funil e visão por etapa.
+- [x] **Kanban de pipeline**: arrastar leads entre etapas do funil.
 - [x] **Detalhe do lead**: drawer com timeline, score, tags, próxima ação e motivo de perda.
 - [x] **Respostas sugeridas pela IA**: sugestões contextuais, objeção de preço, handoff humano e typing indicator.
 - [x] **Analytics comercial**: desempenho por canal, motivos de perda e recomendações.
+- [x] **Central de alertas**: leads quentes, propostas pendentes, objeções e perdas sem motivo.
+- [x] **Arquitetura & LGPD**: página técnica para apresentação à banca.
 - [ ] **Filtros avançados**: filtrar por canal, período, valor estimado, responsável e status.
-- [ ] **Notificações**: alertas de leads quentes, leads sem resposta e follow-ups pendentes.
 
 ### 3. Melhorias técnicas (para dar mais credibilidade)
 
