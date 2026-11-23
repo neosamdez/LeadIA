@@ -1,7 +1,8 @@
 .fox-mascot {
-  position: fixed; right: 22px; bottom: 22px; z-index: 90;
+  position: fixed; z-index: 90;
   display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
   pointer-events: none;
+  user-select: none;
 }
 .fox-bubble {
   max-width: 260px; padding: 10px 14px; border-radius: 14px 14px 4px 14px;
@@ -13,12 +14,13 @@
 }
 .fox-bubble strong { color: #FF8A84; }
 .fox-btn {
-  width: 72px; height: 72px; border: 0; background: transparent; padding: 0; cursor: pointer;
+  width: 72px; height: 72px; border: 0; background: transparent; padding: 0; cursor: grab;
   pointer-events: auto; filter: drop-shadow(0 10px 20px rgba(0,0,0,.35));
-  transition: transform .2s ease;
+  transition: transform .2s ease; touch-action: none;
 }
 .fox-btn:hover { transform: scale(1.06) rotate(-2deg); }
-.fox-btn:active { transform: scale(.96); }
+.fox-btn:active { cursor: grabbing; }
+.fox-btn.dragging { cursor: grabbing; transition: none; transform: scale(1.04); }
 .fox-float { animation: fox-float 3.2s ease-in-out infinite; }
 .fox-wave .fox-tail { transform-origin: 60px 52px; animation: fox-tail .5s ease-in-out 2; }
 .fox-wave .fox-paw { transform-origin: 24px 52px; animation: fox-paw .4s ease-in-out 2; }
@@ -30,4 +32,4 @@
 @keyframes fox-paw { 0%,100%{ transform: rotate(0)} 50%{ transform: rotate(-18deg)} }
 @keyframes fox-blink { 0%,100%{ transform: scaleY(1)} 50%{ transform: scaleY(.1)} }
 @keyframes fox-sparkle { 0%{ opacity:0; transform: translateY(0) scale(.5)} 30%{ opacity:1; transform: translateY(-10px) scale(1)} 100%{ opacity:0; transform: translateY(-28px) scale(1.1)} }
-@media (max-width: 700px){ .fox-mascot{ right: 12px; bottom: 12px; } .fox-btn{ width: 60px; height: 60px; } .fox-bubble{ max-width: 210px; font-size: 12px; } }
+@media (max-width: 700px){ .fox-btn{ width: 60px; height: 60px; } .fox-bubble{ max-width: 210px; font-size: 12px; } }

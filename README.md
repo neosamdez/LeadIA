@@ -21,7 +21,7 @@ Landing page + painel demo funcional para apresentar a proposta de uma plataform
   - **Cenários prontos** para apresentação (novo lead, objeção de preço, conversão)
   - **Tour guiado** pelo painel
   - **Resumo executivo** em modal (demo) e seção na landing
-  - **Mascote interativa (Raposa)**: personagem animada fixa na tela, com reações por aba e ao clique
+  - **Mascote interativa (Raposa)**: personagem animada que pode ser arrastada pela tela, com reações por aba e ao clique
   - Gestão de leads (filtro, status, criação)
   - Configurações da empresa/IA
   - Persistência local via `localStorage`
