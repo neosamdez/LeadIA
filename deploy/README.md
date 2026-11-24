@@ -5,7 +5,7 @@ Os serviços ficam exclusivamente no projeto `thiago-dev`.
 | Branch | Ambiente | Serviço | Secret GitHub Actions |
 |---|---|---|---|
 | `dev` | `dev` | `leadia-dev` | `DOKPLOY_WEBHOOK_DEV` |
-| `main` | `prod` | `leadia-prod` | `DOKPLOY_WEBHOOK_PROD` |
+| `main` | `production` (prod) | `leadia-prod` | `DOKPLOY_WEBHOOK_PROD` |
 
 O workflow `LeadIA CI/CD` executa lint, constrói a imagem e verifica saúde,
 fallback de rotas SPA e assets antes de chamar o webhook do ambiente.
