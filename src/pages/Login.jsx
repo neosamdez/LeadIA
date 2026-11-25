@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Bot, ArrowRight, Sparkles, ShieldCheck, BarChart3, MessageSquare, LogIn } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { isSupabaseConfigured, isRealMode } from '../lib/config';
+import { isRealMode } from '../lib/config';
 import * as authService from '../services/auth';
 
 const highlights = [
@@ -14,9 +14,13 @@ const highlights = [
 export default function Login() {
   const { login } = useApp();
   const navigate = useNavigate();
-  const supabaseReady = isSupabaseConfigured();
   const realMode = isRealMode();
-  const [mode, setMode] = useState(realMode ? 'real' : 'demo');
+  const mode = realMode ? 'real' : 'demo';
+  const visibleHighlights = realMode ? [
+    { icon: ShieldCheck, title: 'Acesso por conta', text: 'Sua sessão e os dados da sua organização são protegidos.' },
+    { icon: MessageSquare, title: 'Histórico persistente', text: 'Leads e conversas ficam salvos no banco da plataforma.' },
+    { icon: BarChart3, title: 'Operação centralizada', text: 'Acesse seus dados em outros dispositivos usando sua conta.' },
+  ] : highlights;
 
   // Demo
   const [name, setName] = useState('Maria Silva');
@@ -89,7 +93,7 @@ export default function Login() {
               : 'Acesse o painel demo com dados simulados, personas, conversas com IA e métricas comerciais prontas para sua apresentação.'}
           </p>
           <div style={{ display: 'grid', gap: 12 }}>
-            {highlights.map(({ icon: Icon, title, text }) => (
+            {visibleHighlights.map(({ icon: Icon, title, text }) => (
               <div key={title} style={{ display: 'flex', gap: 14, alignItems: 'flex-start', padding: '14px 16px', borderRadius: 14, background: 'rgba(255,255,255,.02)', border: '1px solid rgba(255,255,255,.05)' }}>
                 <div style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(96,165,250,.12)', color: '#93C5FD', display: 'grid', placeItems: 'center', flexShrink: 0 }}><Icon size={18} /></div>
                 <div style={{ minWidth: 0 }}>
@@ -109,13 +113,6 @@ export default function Login() {
             </p>
           </div>
 
-          {supabaseReady && (
-            <div style={{ display: 'flex', gap: 8, marginBottom: 18, padding: 4, background: 'rgba(255,255,255,.03)', borderRadius: 12, border: '1px solid var(--line)' }}>
-              <button type="button" className={`btn btn-sm ${mode === 'demo' ? 'btn-primary' : 'btn-ghost'}`} style={{ flex: 1 }} onClick={() => setMode('demo')}>Demo</button>
-              <button type="button" className={`btn btn-sm ${mode === 'real' ? 'btn-primary' : 'btn-ghost'}`} style={{ flex: 1 }} onClick={() => setMode('real')}>Conta real</button>
-            </div>
-          )}
-
           {error && <div style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 10, background: 'rgba(255,90,82,.12)', color: '#FF8A84', fontSize: 13 }}>{error}</div>}
           {info && <div style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 10, background: 'rgba(52,211,153,.12)', color: '#6EE7B7', fontSize: 13 }}>{info}</div>}
 
@@ -127,7 +124,7 @@ export default function Login() {
               </label>
               <label style={{ display: 'grid', gap: 7, fontSize: 14, fontWeight: 600 }}>
                 Senha
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Sua senha" required />
+                <input type="password" autoComplete="current-password" minLength={12} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Sua senha (mínimo 12 caracteres)" required />
               </label>
               <button className="btn btn-primary" type="submit" disabled={loading} style={{ marginTop: 4, width: '100%', justifyContent: 'center' }}>
                 <LogIn size={18} /> {loading ? 'Entrando...' : 'Entrar'}
@@ -160,7 +157,7 @@ export default function Login() {
             <div style={{ fontSize: 12, fontWeight: 700, color: '#93C5FD', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 4 }}>{mode === 'real' ? 'Modo real' : 'Modo demo'}</div>
             <p style={{ fontSize: 13, color: 'var(--mute)', margin: 0, lineHeight: 1.55 }}>
               {mode === 'real'
-                ? 'A autenticação usa Supabase. Dados e permissões devem ser configurados no projeto Supabase.'
+                ? 'Os dados ficam salvos no banco da plataforma, separados por organização. Esta etapa ainda não conecta nem envia mensagens pelo WhatsApp.'
                 : 'Sem backend: o acesso é simulado e os dados ficam salvos apenas neste navegador.'}
             </p>
           </div>

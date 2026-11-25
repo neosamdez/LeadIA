@@ -1,5 +1,13 @@
 import { requireSupabase } from '../lib/supabase';
 
+export async function appendMessage(leadId, message) {
+  const { data, error } = await requireSupabase().rpc('append_message', {
+    p_lead_id: leadId, p_sender: message.from || 'consultor', p_content: message.text,
+  }).single();
+  if (error) throw error;
+  return data;
+}
+
 export async function listConversations(orgId) {
   const sb = requireSupabase();
   const { data, error } = await sb

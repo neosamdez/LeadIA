@@ -13,13 +13,20 @@ import Arquitetura from './pages/Arquitetura';
 import Settings from './pages/Settings';
 
 function Protected({ children }) {
-  const { user } = useApp();
+  const { user, authReady, databaseReady, loadError, retryLoad, logout } = useApp();
+  if (authReady === false) return <p role="status">Restaurando sessão...</p>;
   if (!user) return <Navigate to="/login" replace />;
+  if (user.mode === 'real' && (!databaseReady || loadError)) return <main style={{ padding: 32 }}>
+    <h1>{loadError ? 'Não foi possível carregar seus dados' : 'Carregando sua organização...'}</h1>
+    {loadError && <><p role="alert">{loadError}</p><button onClick={retryLoad}>Tentar novamente</button></>}
+    <button onClick={logout}>Sair</button>
+  </main>;
   return children;
 }
 
 function PublicOnly({ children }) {
-  const { user } = useApp();
+  const { user, authReady } = useApp();
+  if (authReady === false) return <p role="status">Restaurando sessão...</p>;
   if (user) return <Navigate to="/app" replace />;
   return children;
 }
