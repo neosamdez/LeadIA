@@ -1,0 +1,72 @@
+name: LeadIA CI/CD
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [dev, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dokploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - name: Build container and check SPA routes
+        run: |
+          docker build -t leadia:ci .
+          docker run -d --name leadia-ci -p 8080:80 leadia:ci
+          trap 'docker logs leadia-ci; docker rm -f leadia-ci' EXIT
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent http://localhost:8080/healthz; then break; fi
+            sleep 1
+          done
+          curl --fail --silent http://localhost:8080/healthz | grep -qx ok
+          curl --fail --silent http://localhost:8080/ > /tmp/leadia-index.html
+          curl --fail --silent http://localhost:8080/login > /tmp/leadia-login.html
+          cmp /tmp/leadia-index.html /tmp/leadia-login.html
+          ! grep -q '/LeadIA/assets/' /tmp/leadia-index.html
+          asset=$(grep -oE '/assets/[^" ]+\.js' /tmp/leadia-index.html | head -n 1)
+          test -n "$asset"
+          curl --fail --silent "http://localhost:8080$asset" > /dev/null
+
+  deploy:
+    needs: validate
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy selected branch to Dokploy
+        env:
+          WEBHOOK_DEV: ${{ secrets.DOKPLOY_WEBHOOK_DEV }}
+          WEBHOOK_PROD: ${{ secrets.DOKPLOY_WEBHOOK_PROD }}
+          BRANCH: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          case "$BRANCH" in
+            dev) webhook="$WEBHOOK_DEV" ;;
+            main) webhook="$WEBHOOK_PROD" ;;
+            *) echo "Branch without deployment target"; exit 1 ;;
+          esac
+          if [ -z "$webhook" ]; then
+            echo "Missing Dokploy webhook secret for $BRANCH"; exit 1
+          fi
+          payload=$(jq -n --arg ref "refs/heads/$BRANCH" --arg sha "$COMMIT" \
+            '{ref: $ref, after: $sha, head_commit: {id: $sha, message: "Validated GitHub Actions deployment"}}')
+          curl --fail-with-body --silent --show-error --max-time 60 \
+            --request POST "$webhook" \
+            --header 'Content-Type: application/json' \
+            --header 'X-GitHub-Event: push' \
+            --data "$payload"
