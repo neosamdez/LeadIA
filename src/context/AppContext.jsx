@@ -3,15 +3,7 @@ import { AppContext } from './contextCore';
 import RealAppProvider from './RealAppProvider';
 import { seedConversations, seedLeads } from '../data/mockData';
 import { personas, defaultPersonaId } from '../data/personas';
-import { isSupabaseConfigured, isRealMode } from '../lib/config';
-import { onAuthStateChange, signOut } from '../services/auth';
-import { getOrCreateDefaultOrg } from '../services/org';
-import * as leadsService from '../services/leads';
-import * as conversationsService from '../services/conversations';
-import * as followUpsService from '../services/followUps';
-import * as goalsService from '../services/goals';
-import * as settingsService from '../services/settings';
-import { dbLeadToApp, appLeadToDb, dbMessageToApp, dbFollowUpToApp, appFollowUpToDb } from '../lib/mappers';
+import { isRealMode } from '../lib/config';
 
 const STORAGE_KEY = 'leadia_demo_v1';
 
@@ -94,74 +86,10 @@ function DemoAppProvider({ children }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
-  useEffect(() => {
-    if (!isSupabaseConfigured()) return undefined;
-    const { data } = onAuthStateChange((_event, session) => {
-      const u = session?.user;
-      setState((s) => {
-        if (u) {
-          return {
-            ...s,
-            user: {
-              id: u.id,
-              name: u.user_metadata?.full_name || u.email?.split('@')[0] || 'Usuário',
-              company: u.user_metadata?.company || s.user?.company || 'Minha Empresa',
-              email: u.email || '',
-              mode: 'real',
-            },
-          };
-        }
-        if (s.user?.mode === 'real') return { ...s, user: null };
-        return s;
-      });
-    });
-    return () => data?.subscription?.unsubscribe?.();
-  }, []);
-
-  useEffect(() => {
-    if (!isSupabaseConfigured() || state.user?.mode !== 'real' || !state.user?.id) return undefined;
-    let cancelled = false;
-    (async () => {
-      try {
-        const org = await getOrCreateDefaultOrg({ id: state.user.id, email: state.user.email, user_metadata: { company: state.user.company, full_name: state.user.name } });
-        if (cancelled) return;
-        const [dbLeads, dbConvs, dbFollowUps, dbGoals, dbSettings] = await Promise.all([
-          leadsService.listLeads(org.id),
-          conversationsService.listConversations(org.id),
-          followUpsService.listFollowUps(org.id).catch((e) => { console.error('load followUps', e); return []; }),
-          goalsService.getGoals(org.id).catch((e) => { console.error('load goals', e); return null; }),
-          settingsService.getOrgSettings(org.id).catch((e) => { console.error('load settings', e); return null; }),
-        ]);
-        if (cancelled) return;
-        const leads = (dbLeads || []).map(dbLeadToApp);
-        const conversations = {};
-        for (const c of (dbConvs || [])) {
-          const msgs = (c.messages || []).sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).map(dbMessageToApp);
-          conversations[c.lead_id] = msgs;
-        }
-        const followUps = (dbFollowUps || []).map(dbFollowUpToApp);
-        setState((s) => ({
-          ...s,
-          orgId: org.id,
-          leads,
-          conversations,
-          leadEvents: buildSeedEvents(leads, conversations),
-          followUps,
-          goals: dbGoals ? { ...s.goals, ...dbGoals } : s.goals,
-          settings: dbSettings ? { ...s.settings, ...dbSettings, nvidiaApiKey: s.settings.nvidiaApiKey } : s.settings,
-        }));
-      } catch (err) {
-        console.error('Falha ao carregar dados reais', err);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [state.user?.mode, state.user?.id]);
-
   const api = useMemo(() => ({
     ...state,
     login: (user) => setState((s) => ({ ...s, user })),
     logout: () => {
-      if (isSupabaseConfigured()) signOut().catch(() => {});
       setState((s) => ({ ...s, user: null }));
     },
     recordEvent: (leadId, event) => setState((s) => ({
@@ -179,19 +107,6 @@ function DemoAppProvider({ children }) {
             : s.leadEvents,
         };
       });
-      if (state.user?.mode === 'real' && state.orgId) {
-        const dbPatch = {};
-        if ('name' in patch) dbPatch.name = patch.name;
-        if ('company' in patch) dbPatch.company = patch.company;
-        if ('channel' in patch) dbPatch.channel = patch.channel;
-        if ('interest' in patch) dbPatch.interest = patch.interest;
-        if ('status' in patch) dbPatch.status = patch.status;
-        if ('score' in patch) dbPatch.score = patch.score;
-        if ('lastMessage' in patch) dbPatch.last_message = patch.lastMessage;
-        if ('tags' in patch) dbPatch.tags = patch.tags;
-        if ('avatar' in patch) dbPatch.avatar = patch.avatar;
-        if (Object.keys(dbPatch).length) leadsService.updateLead(id, dbPatch).catch((e) => console.error('updateLead supabase', e));
-      }
     },
     deleteLead: (id) => {
       setState((s) => {
@@ -199,9 +114,6 @@ function DemoAppProvider({ children }) {
         const { [id]: _ev, ...restEv } = s.leadEvents;
         return { ...s, leads: s.leads.filter((l) => l.id !== id), conversations: restConv, leadEvents: restEv, followUps: s.followUps.filter(f => f.leadId !== id) };
       });
-      if (state.user?.mode === 'real' && state.orgId) {
-        leadsService.deleteLead(id).catch((e) => console.error('deleteLead supabase', e));
-      }
     },
     dismissAlert: (alertId) => setState((s) => ({ ...s, dismissedAlerts: s.dismissedAlerts.includes(alertId) ? s.dismissedAlerts : [...s.dismissedAlerts, alertId] })),
     clearDismissedAlerts: () => setState((s) => ({ ...s, dismissedAlerts: [] })),
@@ -209,30 +121,12 @@ function DemoAppProvider({ children }) {
       const localId = 'fu' + Date.now();
       const localFu = { id: localId, done: false, createdAt: nowTime(), ...fu };
       setState((s) => ({ ...s, followUps: [localFu, ...s.followUps] }));
-      if (state.user?.mode === 'real' && state.orgId) {
-        (async () => {
-          try {
-            const created = await followUpsService.createFollowUp(state.orgId, appFollowUpToDb(localFu, state.orgId));
-            const mapped = dbFollowUpToApp(created);
-            setState((s) => ({ ...s, followUps: s.followUps.map((f) => (f.id === localId ? { ...mapped, createdAt: mapped.createdAt || f.createdAt } : f)) }));
-          } catch (e) {
-            console.error('addFollowUp supabase', e);
-          }
-        })();
-      }
     },
     completeFollowUp: (id) => {
       setState((s) => ({ ...s, followUps: s.followUps.map(f => f.id === id ? { ...f, done: true, status: 'done' } : f) }));
-      if (state.user?.mode === 'real' && state.orgId) {
-        followUpsService.updateFollowUp(id, { status: 'done' }).catch((e) => console.error('completeFollowUp supabase', e));
-      }
     },
     updateGoals: (patch) => {
       setState((s) => ({ ...s, goals: { ...s.goals, ...patch } }));
-      if (state.user?.mode === 'real' && state.orgId) {
-        const next = { ...state.goals, ...patch };
-        goalsService.upsertGoals(state.orgId, next).catch((e) => console.error('updateGoals supabase', e));
-      }
     },
     updateLeadStatus: (id, status) => {
       setState((s) => {
@@ -245,9 +139,6 @@ function DemoAppProvider({ children }) {
           leadEvents: { ...s.leadEvents, [id]: [...(s.leadEvents[id] || []), { type: 'status', text: `Status alterado: ${prev || '—'} → ${status}`, time }] },
         };
       });
-      if (state.user?.mode === 'real' && state.orgId) {
-        leadsService.updateLead(id, { status }).catch((e) => console.error('updateLeadStatus supabase', e));
-      }
     },
     addLead: (lead) => {
       const time = lead.time || nowTime();
@@ -258,24 +149,6 @@ function DemoAppProvider({ children }) {
         conversations: { ...s.conversations, [localLead.id]: [] },
         leadEvents: { ...s.leadEvents, [localLead.id]: [{ type: 'lead', text: `Lead criado via ${localLead.channel || 'painel'}`, time }] },
       }));
-      if (state.user?.mode === 'real' && state.orgId) {
-        (async () => {
-          try {
-            const payload = appLeadToDb(localLead, state.orgId);
-            const created = await leadsService.createLead(state.orgId, payload);
-            const mapped = dbLeadToApp(created);
-            setState((s) => {
-              const conversations = { ...s.conversations, [mapped.id]: s.conversations[localLead.id] || [] };
-              if (mapped.id !== localLead.id) delete conversations[localLead.id];
-              const leadEvents = { ...s.leadEvents, [mapped.id]: s.leadEvents[localLead.id] || [] };
-              if (mapped.id !== localLead.id) delete leadEvents[localLead.id];
-              return { ...s, leads: s.leads.map((l) => (l.id === localLead.id ? { ...mapped, time: l.time } : l)), conversations, leadEvents };
-            });
-          } catch (e) {
-            console.error('addLead supabase', e);
-          }
-        })();
-      }
     },
     sendMessage: (leadId, message) => {
       setState((s) => {
@@ -284,32 +157,9 @@ function DemoAppProvider({ children }) {
         const leads = s.leads.map((l) => l.id === leadId ? { ...l, lastMessage: message.text, time: message.time } : l);
         return { ...s, conversations: { ...s.conversations, [leadId]: nextConv }, leads };
       });
-      if (state.user?.mode === 'real' && state.orgId) {
-        (async () => {
-          try {
-            const conv = await conversationsService.upsertConversation(state.orgId, leadId);
-            await conversationsService.addMessage(state.orgId, {
-              conversationId: conv.id,
-              leadId,
-              sender: message.from || 'client',
-              content: message.text,
-              meta: {},
-            });
-            await leadsService.updateLead(leadId, { last_message: message.text }).catch(() => {});
-          } catch (e) {
-            console.error('sendMessage supabase', e);
-          }
-        })();
-      }
     },
     updateSettings: (patch) => {
       setState((s) => ({ ...s, settings: { ...s.settings, ...patch } }));
-      if (state.user?.mode === 'real' && state.orgId) {
-        const { nvidiaApiKey: _localOnly, ...safePatch } = patch || {};
-        if (Object.keys(safePatch).length) {
-          settingsService.upsertOrgSettings(state.orgId, safePatch).catch((e) => console.error('updateSettings supabase', e));
-        }
-      }
     },
     applyPersona: (personaId) => setState((s) => {
       if (s.user?.mode === 'real') return s;

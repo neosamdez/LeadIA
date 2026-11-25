@@ -8,9 +8,11 @@ export default function Settings() {
   const [form, setForm] = useState(settings);
   const [saved, setSaved] = useState(false);
 
-  function save(e) {
+  async function save(e) {
     e.preventDefault();
-    updateSettings(form);
+    setSaved(false);
+    const result = await updateSettings(form);
+    if (result === null) return;
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
@@ -20,7 +22,7 @@ export default function Settings() {
       <div className="page-head">
         <div>
           <h1>Configurações</h1>
-          <p>Personalize o comportamento da IA para a demonstração.</p>
+          <p>{user?.mode === 'real' ? 'Gerencie as configurações da sua organização.' : 'Personalize o comportamento da IA para a demonstração.'}</p>
         </div>
       </div>
 
@@ -58,7 +60,10 @@ export default function Settings() {
           </div>
         </form>
 
-        <div style={{ display: 'grid', gap: 16, alignContent: 'start' }}>
+        {user?.mode === 'real' ? <section className="card" style={{ padding: 24, alignSelf: 'start' }}>
+          <h2>Sua conta</h2><p>{user?.email}</p><p>Dados salvos no banco da plataforma.</p>
+          <p>WhatsApp e automação de mensagens ainda não estão conectados.</p>
+        </section> : <div style={{ display: 'grid', gap: 16, alignContent: 'start' }}>
           <div className="card" style={{ padding: 24 }}>
             <h2 style={{ margin: '0 0 8px', fontSize: 20, display: 'flex', gap: 8, alignItems: 'center' }}><Building2 size={18} color="var(--acc)" /> Demo por persona</h2>
             <p style={{ margin: '0 0 12px', fontSize: 14, color: 'var(--mute)' }}>Carrega leads, conversas e contexto do segmento para apresentação.</p>
@@ -109,7 +114,7 @@ export default function Settings() {
             <h2 style={{ margin: '0 0 8px', fontSize: 20, color: 'var(--ink)' }}>Modo apresentação</h2>
             <p style={{ margin: 0, fontSize: 14, color: 'var(--mute)' }}>Os dados de leads/conversas são simulados em localStorage. Com a NVIDIA API configurada, as respostas da IA nas conversas são geradas em tempo real.</p>
           </div>
-        </div>
+        </div>}
       </div>
       <style>{`@media (max-width: 900px){ .app-main [style*="1.2fr"]{grid-template-columns:1fr !important} }`}</style>
     </div>

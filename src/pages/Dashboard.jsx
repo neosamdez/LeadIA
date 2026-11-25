@@ -58,7 +58,9 @@ function ExecutiveSummary({ onClose }) {
 }
 
 export default function Dashboard() {
-  const { leads, simulateScenario, startTour, applyPersona, activePersonaId } = useApp();
+  const { leads, conversations, leadEvents, user, simulateScenario, startTour, applyPersona, activePersonaId } = useApp();
+  const real = user?.mode === 'real';
+  const activity = Object.values(leadEvents).flat().sort((a,b) => (b.created_at || '').localeCompare(a.created_at || '')).slice(0,6);
   const [summary, setSummary] = useState(false);
   const [scenarioMsg, setScenarioMsg] = useState('');
 
@@ -94,17 +96,17 @@ export default function Dashboard() {
           <p>Visão geral do seu atendimento comercial com IA.</p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button className="btn btn-outline btn-sm" onClick={() => setSummary(true)}><FileText size={15} /> Resumo executivo</button>
-          <button className="btn btn-outline btn-sm" onClick={startTour}><Compass size={15} /> Iniciar tour</button>
+          {!real && <button className="btn btn-outline btn-sm" onClick={() => setSummary(true)}><FileText size={15} /> Resumo executivo</button>}
+          {!real && <button className="btn btn-outline btn-sm" onClick={startTour}><Compass size={15} /> Iniciar tour</button>}
           <Link to="/app/conversas" className="btn btn-primary btn-sm">Ver conversas <ArrowRight size={16} /></Link>
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 16, marginBottom: 24 }}>
         <Stat icon={Users} label="Leads recebidos" value={stats.total} note={`${stats.emAberto} em aberto`} color={{ bg: 'rgba(96,165,250,.14)', fg: '#93C5FD' }} />
-        <Stat icon={MessageSquare} label="Atendimentos" value={stats.total} note="Resposta imediata da IA" color={{ bg: 'rgba(52,211,153,.14)', fg: '#6EE7B7' }} />
+        <Stat icon={MessageSquare} label="Atendimentos" value={real ? Object.values(conversations).filter(msgs => msgs.length > 0).length : stats.total} note={real ? 'Conversas com mensagens salvas' : 'Resposta imediata da IA'} color={{ bg: 'rgba(52,211,153,.14)', fg: '#6EE7B7' }} />
         <Stat icon={TrendingUp} label="Taxa de conversão" value={`${stats.taxa}%`} note={`${stats.convertidos} convertidos`} color={{ bg: 'rgba(251,191,36,.14)', fg: '#FCD34D' }} />
-        <Stat icon={DollarSign} label="Receita gerada" value={`R$ ${stats.receita}`} note="No período simulado" color={{ bg: 'rgba(255,90,82,.14)', fg: '#FF8A84' }} />
+        <Stat icon={DollarSign} label={real ? 'Valor convertido' : 'Receita gerada'} value={`R$ ${stats.receita}`} note={real ? 'Valor informado nos leads convertidos' : 'No período simulado'} color={{ bg: 'rgba(255,90,82,.14)', fg: '#FF8A84' }} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.3fr) minmax(0,1fr)', gap: 16, alignItems: 'start' }}>
@@ -149,7 +151,11 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gap: 16, minWidth: 0 }}>
+        {real ? <section className="card" style={{ padding: 22 }}>
+          <h2>Atividade registrada</h2>
+          {activity.length ? activity.map(event => <p key={event.id}>{event.text} · {event.time}</p>) : <p>Nenhuma atividade registrada.</p>}
+          <p>WhatsApp ainda não conectado.</p>
+        </section> : <div style={{ display: 'grid', gap: 16, minWidth: 0 }}>
           <div className="card" style={{ padding: 22, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <Building2 size={18} color="var(--acc)" />
@@ -209,7 +215,7 @@ export default function Dashboard() {
               <strong style={{ color: 'var(--ink)' }}>Dica:</strong> use o tour guiado e os cenários prontos para apresentar o app ao vivo.
             </div>
           </div>
-        </div>
+        </div>}
       </div>
 
       {summary && <ExecutiveSummary onClose={() => setSummary(false)} />}

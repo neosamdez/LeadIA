@@ -31,15 +31,16 @@ function LeadDetail({ lead, messages, events, onClose, onOpenChat, onUpdate, onD
     setForm({ name: lead.name, channel: lead.channel, interest: lead.interest, value: lead.value, status: lead.status, score: lead.score ?? 60, nextAction: lead.nextAction || '', lossReason: lead.lossReason || '', tags: (lead.tags || []).join(', ') });
     setEditing(true);
   }
-  function saveEdit(e) {
+  async function saveEdit(e) {
     e.preventDefault();
-    onUpdate(lead.id, {
+    const result = await onUpdate(lead.id, {
       ...form,
       value: Number(form.value) || 0,
       score: Math.max(0, Math.min(100, Number(form.score) || 0)),
       tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
       avatar: form.name.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase(),
     });
+    if (result === null) return;
     setEditing(false);
   }
   function copySummary() {
@@ -173,15 +174,16 @@ export default function Leads() {
 
   const detailLead = leads.find(l => l.id === detailId);
 
-  function create(e) {
+  async function create(e) {
     e.preventDefault();
     const id = 'l' + Date.now();
-    addLead({
+    const result = await addLead({
       id, name: form.name, channel: form.channel, interest: form.interest,
       status: 'Novo', value: Number(form.value) || 0,
       lastMessage: 'Lead criado manualmente.', time: 'Agora', avatar: form.name.split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase(),
       score: 60, tags: ['Novo'], nextAction: 'Fazer primeiro contato', lossReason: ''
     });
+    if (result === null) return;
     setForm({ name: '', channel: 'Instagram', interest: '', value: '' });
     setOpen(false);
   }

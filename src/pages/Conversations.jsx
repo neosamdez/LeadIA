@@ -80,10 +80,11 @@ export default function Conversations() {
 
   function pick(id) { setSelected(id); navigate(`/app/conversas/${id}`); }
 
-  function send(from = 'consultor', textOverride) {
+  async function send(from = 'consultor', textOverride) {
     const text = (textOverride ?? draft).trim();
     if (!text || !lead) return;
-    sendMessage(lead.id, { from, text, time: timeNow() });
+    const result = await sendMessage(lead.id, { from, text, time: timeNow() });
+    if (result === null) return;
     if (!textOverride) setDraft('');
   }
 
