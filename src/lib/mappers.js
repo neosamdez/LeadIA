@@ -4,10 +4,11 @@ export function dbLeadToApp(row) {
     id: row.id,
     name: row.name,
     company: row.company || '',
+    phone: row.phone_e164 || '',
     channel: row.channel || 'WhatsApp',
     interest: row.interest || '',
     status: row.status || 'Novo',
-    value: row.value ?? 0,
+    value: Number(row.value ?? 0),
     lastMessage: row.last_message || '',
     time: row.updated_at ? new Date(row.updated_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '',
     avatar: row.avatar || (row.name || '?').split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase(),
@@ -31,6 +32,10 @@ export function appLeadToDb(lead, orgId) {
     last_message: lead.lastMessage || null,
     avatar: lead.avatar || null,
     tags: lead.tags || [],
+    value: Number(lead.value || 0),
+    next_action: lead.nextAction || null,
+    loss_reason: lead.lossReason || null,
+    phone_e164: lead.phone || null,
   };
 }
 

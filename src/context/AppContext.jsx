@@ -1,7 +1,9 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
+import { AppContext } from './contextCore';
+import RealAppProvider from './RealAppProvider';
 import { seedConversations, seedLeads } from '../data/mockData';
 import { personas, defaultPersonaId } from '../data/personas';
-import { isSupabaseConfigured } from '../lib/config';
+import { isSupabaseConfigured, isRealMode } from '../lib/config';
 import { onAuthStateChange, signOut } from '../services/auth';
 import { getOrCreateDefaultOrg } from '../services/org';
 import * as leadsService from '../services/leads';
@@ -11,8 +13,7 @@ import * as goalsService from '../services/goals';
 import * as settingsService from '../services/settings';
 import { dbLeadToApp, appLeadToDb, dbMessageToApp, dbFollowUpToApp, appFollowUpToDb } from '../lib/mappers';
 
-const AppContext = createContext(null);
-const STORAGE_KEY = 'leadia_app_v1';
+const STORAGE_KEY = 'leadia_demo_v1';
 
 function loadState() {
   try {
@@ -86,7 +87,7 @@ const defaultState = {
   tour: { active: false, step: 0 },
 };
 
-export function AppProvider({ children }) {
+function DemoAppProvider({ children }) {
   const [state, setState] = useState(() => mergeState(loadState()));
 
   useEffect(() => {
@@ -395,4 +396,8 @@ export function useApp() {
   const ctx = useContext(AppContext);
   if (!ctx) throw new Error('useApp must be used within AppProvider');
   return ctx;
+}
+
+export function AppProvider({ children }) {
+  return isRealMode() ? <RealAppProvider>{children}</RealAppProvider> : <DemoAppProvider>{children}</DemoAppProvider>;
 }

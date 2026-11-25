@@ -16,7 +16,7 @@ const nav = [
 ];
 
 export default function AppLayout() {
-  const { user, logout } = useApp();
+  const { user, logout, pendingWrites, syncError, clearSyncError } = useApp();
   const navigate = useNavigate();
   return (
     <div className="app-shell">
@@ -46,6 +46,10 @@ export default function AppLayout() {
         </div>
       </aside>
       <main className="app-main">
+        {pendingWrites > 0 && <p role="status" aria-live="polite">Salvando no banco...</p>}
+        {syncError && <div role="alert" style={{ padding: 16, marginBottom: 16, border: '1px solid #f87171', borderRadius: 8 }}>
+          <p>{syncError}</p><button onClick={clearSyncError}>Fechar aviso</button>
+        </div>}
         <Outlet />
       </main>
       <Tour />

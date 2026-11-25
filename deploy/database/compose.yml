@@ -1,0 +1,153 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: leadia
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:?required}
+      REST_DB_PASSWORD: ${REST_DB_PASSWORD:?required}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init.sh:/docker-entrypoint-initdb.d/10-roles.sh:ro
+    networks: [private]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U postgres -d leadia]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    mem_limit: 768m
+    cpus: 1.0
+
+  auth:
+    image: supabase/gotrue:v2.199.0
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: ${SITE_URL:?required}/auth/v1
+      GOTRUE_SITE_URL: ${SITE_URL:?required}
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${AUTH_DB_PASSWORD:?required}@db:5432/leadia
+      GOTRUE_JWT_SECRET: ${JWT_SECRET:?required}
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: 'true'
+      GOTRUE_DISABLE_SIGNUP: ${DISABLE_SIGNUP:-false}
+      GOTRUE_MAILER_AUTOCONFIRM: ${EMAIL_AUTOCONFIRM:-true}
+      GOTRUE_PASSWORD_MIN_LENGTH: 12
+      GOTRUE_RATE_LIMIT_TOKEN_REFRESH: 150
+    networks: [private]
+    healthcheck:
+      test: [CMD, wget, --no-verbose, --tries=1, --spider, http://127.0.0.1:9999/health]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    mem_limit: 256m
+    cpus: 0.5
+
+  migrate:
+    image: postgres:17-alpine
+    restart: 'no'
+    depends_on:
+      auth:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGDATABASE: leadia
+      PGUSER: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD:?required}
+    volumes:
+      - ../../supabase/schema.sql:/migrations/schema.sql:ro
+    command: [psql, -v, ON_ERROR_STOP=1, -f, /migrations/schema.sql]
+    networks: [private]
+    mem_limit: 128m
+
+  rest:
+    image: postgrest/postgrest:v16.6
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${REST_DB_PASSWORD:?required}@db:5432/leadia
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET:?required}
+      PGRST_JWT_AUD: authenticated
+      PGRST_SERVER_PORT: 3000
+      PGRST_ADMIN_SERVER_PORT: 3001
+      PGRST_DB_POOL: 10
+      PGRST_DB_MAX_ROWS: 1000
+    networks: [private]
+    mem_limit: 256m
+    cpus: 0.5
+
+  gateway:
+    image: nginx:stable-alpine
+    restart: unless-stopped
+    depends_on:
+      rest:
+        condition: service_started
+    volumes:
+      - ./gateway.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      private:
+      dokploy-network:
+        aliases:
+          - ${API_ALIAS:?required}
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8000/healthz]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    mem_limit: 64m
+    cpus: 0.25
+
+  backup:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      PGHOST: db
+      PGDATABASE: leadia
+      PGUSER: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD:?required}
+    volumes:
+      - backups:/backups
+    command:
+      - sh
+      - -ec
+      - |
+        umask 077
+        while true; do
+          file="/backups/leadia-$$(date -u +%Y%m%dT%H%M%SZ).dump"
+          pg_dump -Fc -f "$$file.tmp"
+          mv "$$file.tmp" "$$file"
+          pg_restore --list "$$file" > /dev/null
+          find /backups -name '*.dump' -mtime +7 -delete
+          echo 'Backup diário concluído e catálogo validado'
+          sleep 86400
+        done
+    networks: [private]
+    mem_limit: 128m
+    cpus: 0.25
+
+volumes:
+  pgdata:
+  backups:
+
+networks:
+  private:
+    internal: true
+  dokploy-network:
+    external: true
