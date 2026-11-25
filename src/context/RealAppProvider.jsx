@@ -67,14 +67,10 @@ export default function RealAppProvider({ children }) {
       setAuthReady(true);
     };
     let subscription;
-    try {
-      subscription = onAuthStateChange((_event, next) => { authEventSeen = true; receive(next); }).data.subscription;
-      getSession().then(next => { if (!authEventSeen) receive(next); }).catch(err => {
-        if (active) { setLoadError(err.message); setAuthReady(true); }
-      });
-    } catch (err) {
-      setLoadError(err.message); setAuthReady(true);
-    }
+    subscription = onAuthStateChange((_event, next) => { authEventSeen = true; receive(next); }).data.subscription;
+    getSession().then(next => { if (!authEventSeen) receive(next); }).catch(err => {
+      if (active) { setLoadError(err.message); setAuthReady(true); }
+    });
     return () => { active = false; subscription?.unsubscribe(); };
   }, []);
 
@@ -90,13 +86,13 @@ export default function RealAppProvider({ children }) {
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
-    setLoadError('');
     (async () => {
       const nextOrg = await getOrCreateDefaultOrg();
       if (cancelled || principal.current !== userId) return;
       org.current = nextOrg;
       setOrganization(nextOrg);
       await refresh();
+      if (!cancelled) setLoadError('');
     })().catch(err => { if (!cancelled) setLoadError(err.message || 'Não foi possível carregar o banco.'); });
     return () => { cancelled = true; };
   }, [userId, retry, refresh]);
@@ -129,7 +125,7 @@ export default function RealAppProvider({ children }) {
   const api = {
     ...(data || empty), user, orgId: organization?.id || null, authReady,
     databaseReady: Boolean(data), loadError, syncError, pendingWrites,
-    retryLoad: () => setRetry(n => n + 1), clearSyncError: () => setSyncError(''),
+    retryLoad: () => { setLoadError(''); setRetry(n => n + 1); }, clearSyncError: () => setSyncError(''),
     // A sessão válida chega exclusivamente do serviço de autenticação.
     login: noDemoAction,
     logout: async () => {
