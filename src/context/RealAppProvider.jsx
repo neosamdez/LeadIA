@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppContext } from './contextCore';
 import { requireSupabase } from '../lib/supabase';
 import { getSession, onAuthStateChange, signOut } from '../services/auth';
-import { getOrCreateDefaultOrg } from '../services/org';
+import { getOrCreateDefaultOrg, listOrgMembers } from '../services/org';
 import * as leadsService from '../services/leads';
 import * as conversationsService from '../services/conversations';
 import * as followUpsService from '../services/followUps';
@@ -11,7 +11,7 @@ import * as settingsService from '../services/settings';
 import { appLeadToDb, dbLeadToApp, dbMessageToApp, dbFollowUpToApp, appFollowUpToDb } from '../lib/mappers';
 
 const empty = {
-  leads: [], conversations: {}, leadEvents: {}, followUps: [], dismissedAlerts: [],
+  members: [], leads: [], conversations: {}, leadEvents: {}, followUps: [], dismissedAlerts: [],
   goals: { monthlyLeads: 0, conversionRate: 0, revenue: 0, responseMinutes: 0 },
   settings: { companyName: '', segment: '', tone: '', autoReply: false, followUp: true, useNvidiaApi: false, nvidiaApiKey: '' },
   tour: { active: false, step: 0 }, activePersonaId: null,
@@ -19,10 +19,11 @@ const empty = {
 const noDemoAction = () => {};
 
 async function loadOrganization(orgId) {
-  const [leads, convs, followUps, goals, settings, eventsResult] = await Promise.all([
+  const [leads, convs, followUps, goals, settings, eventsResult, members] = await Promise.all([
     leadsService.listLeads(orgId), conversationsService.listConversations(orgId),
     followUpsService.listFollowUps(orgId), goalsService.getGoals(orgId), settingsService.getOrgSettings(orgId),
     requireSupabase().from('lead_events').select('*').eq('org_id', orgId).order('created_at'),
+    listOrgMembers(orgId),
   ]);
   if (eventsResult.error) throw eventsResult.error;
   const conversations = Object.fromEntries(convs.map(c => [c.lead_id,
@@ -31,7 +32,7 @@ async function loadOrganization(orgId) {
   for (const event of eventsResult.data) {
     (leadEvents[event.lead_id] ||= []).push({ ...event, time: new Date(event.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) });
   }
-  return { ...empty, leads: leads.map(dbLeadToApp), conversations, leadEvents,
+  return { ...empty, members, leads: leads.map(dbLeadToApp), conversations, leadEvents,
     followUps: followUps.map(dbFollowUpToApp), goals: goals || empty.goals,
     settings: { ...empty.settings, ...settings },
   };
@@ -156,6 +157,7 @@ export default function RealAppProvider({ children }) {
     addLead: lead => mutate(orgId => leadsService.createLead(orgId, appLeadToDb(lead, orgId))),
     updateLead: (id, patch) => mutate(() => leadsService.updateLead(id, patchForDb(patch))),
     updateLeadStatus: (id, status) => mutate(() => leadsService.updateLead(id, { status })),
+    assignLead: (id, ownerId) => mutate(() => leadsService.updateLead(id, { owner_id: ownerId })),
     deleteLead: id => mutate(() => leadsService.deleteLead(id)),
     sendMessage: (leadId, message) => mutate(() => conversationsService.appendMessage(leadId, message)),
     setWhatsAppPause: (leadId, paused) => mutate(() => conversationsService.setWhatsAppPause(leadId, paused)),

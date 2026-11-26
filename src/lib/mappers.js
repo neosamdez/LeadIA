@@ -1,7 +1,10 @@
+import { followUpDueDate } from './followUpDates';
+
 export function dbLeadToApp(row) {
   if (!row) return row;
   return {
     id: row.id,
+    ownerId: row.owner_id || null,
     name: row.name,
     company: row.company || '',
     phone: row.phone_e164 || '',
@@ -59,6 +62,7 @@ export function dbFollowUpToApp(row) {
     title: row.title || '',
     note: row.note || '',
     when: row.when_label || '',
+    dueAt: row.due_at || '',
     done: row.status === 'done',
     status: row.status || 'open',
     createdAt: row.created_at || '',
@@ -72,6 +76,7 @@ export function appFollowUpToDb(fu, orgId) {
     title: fu.title || '',
     note: fu.note || null,
     when_label: fu.when || null,
+    due_at: followUpDueDate(fu, fu.createdAt || new Date())?.toISOString() ?? null,
     status: fu.done ? 'done' : (fu.status || 'open'),
   };
 }

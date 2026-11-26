@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Bell, Flame, Clock, AlertTriangle, CheckCircle2, MessageSquare, X, CalendarPlus, ListChecks } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import { followUpDueDate, followUpPeriod, formatFollowUpDate } from '../lib/followUpDates';
 
 function AlertCard({ icon: Icon, color, title, desc, action, onAction, onDismiss, onFollowUp }) {
   return (
@@ -24,6 +25,12 @@ export default function Alertas() {
   const { leads, dismissedAlerts, dismissAlert, clearDismissedAlerts, addFollowUp, followUps, completeFollowUp } = useApp();
   const navigate = useNavigate();
   const [showDone, setShowDone] = useState(false);
+  const [period, setPeriod] = useState('all');
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(timer);
+  }, []);
 
   const alerts = useMemo(() => {
     const items = [];
@@ -53,7 +60,15 @@ export default function Alertas() {
     proposal: alerts.filter(a => a.type === 'proposal').length,
     objection: alerts.filter(a => a.type === 'objection').length,
   };
-  const visibleFollowUps = followUps.filter(f => showDone || !f.done);
+  const tasks = followUps.filter(task => task.status !== 'canceled').map(task => {
+    const due = followUpDueDate(task);
+    return { ...task, due, period: task.done ? 'done' : followUpPeriod(due, now) };
+  });
+  const today = tasks.filter(task => task.period === 'today').length;
+  const overdue = tasks.filter(task => task.period === 'overdue').length;
+  const visibleFollowUps = tasks
+    .filter(task => period === 'all' ? showDone || !task.done : task.period === period)
+    .sort((left, right) => (left.due?.getTime() ?? Infinity) - (right.due?.getTime() ?? Infinity));
 
   return (
     <div>
@@ -90,6 +105,11 @@ export default function Alertas() {
       <div className="card" style={{ padding: 22 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
           <h2 style={{ margin: 0, fontSize: 20, display: 'flex', gap: 8, alignItems: 'center' }}><ListChecks size={18} color="var(--acc)" /> Follow-ups</h2>
+          <select aria-label="Prazo dos follow-ups" value={period} onChange={event => setPeriod(event.target.value)}>
+            <option value="all">Todos os prazos</option>
+            <option value="today">Hoje ({today})</option>
+            <option value="overdue">Atrasados ({overdue})</option>
+          </select>
           <label style={{ fontSize: 13, color: 'var(--mute)', display: 'flex', gap: 8, alignItems: 'center' }}><input type="checkbox" checked={showDone} onChange={e => setShowDone(e.target.checked)} /> Mostrar concluídos</label>
         </div>
         <div style={{ display: 'grid', gap: 10 }}>
@@ -97,16 +117,18 @@ export default function Alertas() {
             const lead = leads.find(l => l.id === f.leadId);
             return (
               <div key={f.id} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: 12, border: '1px solid var(--line)', borderRadius: 10, opacity: f.done ? 0.6 : 1 }}>
-                <input type="checkbox" checked={f.done} onChange={() => completeFollowUp(f.id)} />
+                <input type="checkbox" aria-label={'Concluir '+f.title} checked={f.done} disabled={f.done} onChange={() => completeFollowUp(f.id)} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 600, textDecoration: f.done ? 'line-through' : 'none' }}>{f.title}</div>
-                  <div style={{ fontSize: 12, color: 'var(--mute)' }}>{f.note} · {f.when}{lead ? ` · ${lead.channel}` : ''}</div>
+                  <div style={{ fontSize: 12, color: 'var(--mute)' }}>{[f.note, f.due ? formatFollowUpDate(f.due) : f.when || 'Sem prazo'].filter(Boolean).join(' · ')}{lead ? ` · ${lead.channel}` : ''}</div>
+                  {f.period === 'today' && <span className="badge blue">Vence hoje</span>}
+                  {f.period === 'overdue' && <span className="badge red">Atrasado</span>}
                 </div>
                 {lead && <button className="btn btn-sm btn-outline" onClick={() => navigate(`/app/conversas/${lead.id}`)}>Abrir</button>}
               </div>
             );
           })}
-          {visibleFollowUps.length === 0 && <div style={{ color: 'var(--mute)', fontSize: 14 }}>Nenhum follow-up pendente. Crie a partir de um alerta.</div>}
+          {visibleFollowUps.length === 0 && <div style={{ color: 'var(--mute)', fontSize: 14 }}>{period === 'all' ? 'Nenhum follow-up pendente. Crie um retorno em Conversas ou Alertas.' : 'Nenhum follow-up nesse prazo.'}</div>}
         </div>
       </div>
 

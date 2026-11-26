@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Send, Bot, User, Sparkles, Lightbulb, UserCheck, AlertCircle, Zap, History, X, Copy, FileText, CalendarPlus, Brain, CheckCircle2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { dateInputValue } from '../lib/followUpDates';
 import { generateNvidiaReply, generateNvidiaClientMessage, isNvidiaConfigured } from '../services/nvidia';
 
 function timeNow() {
@@ -43,7 +44,7 @@ const whatsappDeliveryLabels = {
 };
 
 export default function Conversations() {
-  const { leads, conversations, sendMessage, updateLeadStatus, settings, recordEvent, leadEvents, addFollowUp, setWhatsAppPause, pendingWrites } = useApp();
+  const { leads, conversations, sendMessage, updateLeadStatus, settings, recordEvent, leadEvents, addFollowUp, setWhatsAppPause, pendingWrites, members = [], assignLead, user } = useApp();
   const { leadId } = useParams();
   const navigate = useNavigate();
   const [selected, setSelected] = useState(leadId || leads[0]?.id);
@@ -56,6 +57,8 @@ export default function Conversations() {
   const [showTimeline, setShowTimeline] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showProposal, setShowProposal] = useState(false);
+  const [followUpForm, setFollowUpForm] = useState({ date: '', min: '' });
+  const followUpDialog = useRef(null);
   const endRef = useRef(null);
   const typingTimer = useRef();
   const abortRef = useRef();
@@ -72,6 +75,9 @@ export default function Conversations() {
     const searchable = [item.name, item.company, item.phone, item.interest, item.lastMessage].join(" ");
     return !query || normalizeSearch(searchable).includes(query);
   });
+  const assignees = members.filter(member => member.role !== 'viewer');
+  const owner = members.find(member => member.id === lead?.ownerId);
+  const canAssign = assignees.some(member => member.id === user?.id);
   const msgs = conversations[lead?.id] || [];
   const whatsapp = lead?.whatsappConnected;
   const lastClassification = (leadEvents[lead?.id] || []).findLast(event => event.type === 'whatsapp' && event.meta?.intent);
@@ -100,6 +106,26 @@ export default function Conversations() {
   }
 
   function pick(id) { setSelected(id); navigate(`/app/conversas/${id}`); }
+
+  function openFollowUp() {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    setFollowUpForm({ date: dateInputValue(tomorrow), min: dateInputValue(today) });
+    followUpDialog.current?.showModal();
+  }
+
+  async function submitFollowUp(event) {
+    event.preventDefault();
+    const date = new Date(followUpForm.date + 'T23:59:59.999');
+    if (!lead || Number.isNaN(date.getTime())) return;
+    const result = await addFollowUp({
+      leadId: lead.id, title: 'Follow-up: ' + lead.name, note: 'Retomar ' + lead.interest, dueAt: date.toISOString(),
+    });
+    if (result === null) return;
+    followUpDialog.current?.close();
+    await recordEvent(lead.id, { type: 'event', text: 'Follow-up agendado pelo consultor' });
+  }
 
   async function send(from = 'consultor', textOverride) {
     const text = (textOverride ?? draft).trim();
@@ -289,13 +315,21 @@ export default function Conversations() {
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontSize: 17, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>{lead.name} <span className={`badge ${intent.tone}`} style={{ fontSize: 11 }}><Brain size={11} style={{ marginRight: 4 }} />{intent.label}</span></div>
                   <div style={{ fontSize: 12, color: 'var(--mute)', marginTop: 2 }}>{lead.channel} · {lead.interest} · <span className="badge blue">{lead.status}</span>{whatsapp && lead.whatsappPaused && <> · Automação pausada</>}</div>
+                  {user?.mode === 'real' && <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, fontSize: 13 }}>
+                    Responsável
+                    <select aria-label="Responsável pela conversa" value={lead.ownerId || ''} disabled={!canAssign || Boolean(pendingWrites)}
+                      onChange={event => assignLead(lead.id, event.target.value || null)}>
+                      <option value="">Sem responsável</option>
+                      {lead.ownerId && !assignees.some(member => member.id === lead.ownerId) && <option value={lead.ownerId} disabled>{owner?.name || 'Responsável indisponível'}</option>}
+                      {assignees.map(member => <option key={member.id} value={member.id}>{member.name}</option>)}
+                    </select>
+                  </label>}
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   {[
                     { label: 'Timeline', icon: History, onClick: () => setShowTimeline(true) },
                     { label: copied ? 'Copiado' : 'Resumo', icon: copied ? CheckCircle2 : Copy, onClick: copyLeadSummary },
                     { label: 'Proposta', icon: FileText, onClick: () => setShowProposal(true) },
-                    { label: 'Follow-up', icon: CalendarPlus, onClick: () => { addFollowUp({ leadId: lead.id, title: `Follow-up: ${lead.name}`, note: `Retomar ${lead.interest}`, when: 'Amanhã' }); recordEvent(lead.id, { type: 'event', text: 'Follow-up agendado pelo consultor' }); } },
                     whatsapp
                       ? { label: lead.whatsappPaused ? 'Retomar automação' : 'Pausar automação', icon: UserCheck,
                         onClick: () => setWhatsAppPause(lead.id, !lead.whatsappPaused), disabled: Boolean(pendingWrites) }
@@ -303,6 +337,7 @@ export default function Conversations() {
                   ].map(({ label, icon: Icon, onClick, disabled }) => (
                     <button key={label} className="btn btn-sm btn-outline" style={{ padding: '5px 9px', fontSize: 12 }} onClick={onClick} disabled={disabled}><Icon size={13} /> {label}</button>
                   ))}
+                  <button type="button" className="btn btn-sm btn-outline" onClick={openFollowUp}><CalendarPlus size={13} /> Follow-up</button>
                   {!whatsapp && <><button className="btn btn-sm btn-outline" style={{ padding: '5px 9px', fontSize: 12 }} onClick={() => sendAI()} disabled={typing || simulating}><Sparkles size={13} /> IA</button>
                   <button className="btn btn-sm btn-primary" style={{ padding: '5px 9px', fontSize: 12 }} onClick={simulateNegotiation} disabled={typing || simulating}><Zap size={13} /> {simulating ? 'Simulando...' : 'Simular'}</button></>}
                 </div>
@@ -403,6 +438,19 @@ export default function Conversations() {
         </div>
       )}
 
+      <dialog ref={followUpDialog} aria-labelledby="follow-up-dialog-title" className="card" style={{ width: 'min(420px, calc(100% - 32px))', padding: 22, color: 'var(--ink)' }}>
+        <form onSubmit={submitFollowUp} style={{ display: 'grid', gap: 14 }}>
+          <h2 id="follow-up-dialog-title" style={{ margin: 0 }}>Agendar follow-up</h2>
+          <label style={{ display: 'grid', gap: 6 }}>Data do retorno
+            <input type="date" required min={followUpForm.min} value={followUpForm.date} onChange={event => setFollowUpForm({ ...followUpForm, date: event.target.value })} />
+          </label>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button type="submit" className="btn btn-primary" disabled={Boolean(pendingWrites)}>Salvar retorno</button>
+            <button type="button" className="btn btn-outline" onClick={() => followUpDialog.current?.close()}>Cancelar</button>
+          </div>
+        </form>
+      </dialog>
+
       {showProposal && lead && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,12,.55)', display: 'grid', placeItems: 'center', padding: 20, zIndex: 60 }} onClick={() => setShowProposal(false)}>
           <div className="card" onClick={(e) => e.stopPropagation()} style={{ width: 'min(680px, 100%)', padding: 24 }}>
@@ -419,7 +467,6 @@ export default function Conversations() {
         </div>
       )}
 
-      <style>{`@media (max-width: 900px){ .app-main .card[style*="grid-template-columns: 320px"]{grid-template-columns:1fr !important;grid-template-rows:auto minmax(0,1fr) !important;height:min(78vh,720px) !important;min-height:460px !important} .app-main .card[style*="grid-template-columns: 320px"] > div:first-child{max-height:160px;border-right:0 !important;border-bottom:1px solid var(--line)} .app-main .card[style*="grid-template-columns: 320px"] > div:last-child{min-height:0} } @media (max-width: 600px){ .app-main .card[style*="grid-template-columns: 320px"]{height:min(74vh,680px) !important;min-height:420px !important} .app-main .card[style*="grid-template-columns: 320px"] > div:first-child{max-height:140px} }`}</style>
     </div>
   );
 }

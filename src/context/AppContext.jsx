@@ -4,6 +4,7 @@ import RealAppProvider from './RealAppProvider';
 import { seedConversations, seedLeads } from '../data/mockData';
 import { personas, defaultPersonaId } from '../data/personas';
 import { isRealMode } from '../lib/config';
+import { followUpDueDate } from '../lib/followUpDates';
 
 const STORAGE_KEY = 'leadia_demo_v1';
 
@@ -119,7 +120,9 @@ function DemoAppProvider({ children }) {
     clearDismissedAlerts: () => setState((s) => ({ ...s, dismissedAlerts: [] })),
     addFollowUp: (fu) => {
       const localId = 'fu' + Date.now();
-      const localFu = { id: localId, done: false, createdAt: nowTime(), ...fu };
+      const createdAt = new Date().toISOString();
+      const localFu = { id: localId, done: false, createdAt, ...fu,
+        dueAt: followUpDueDate(fu, fu.createdAt || createdAt)?.toISOString() ?? null };
       setState((s) => ({ ...s, followUps: [localFu, ...s.followUps] }));
     },
     completeFollowUp: (id) => {

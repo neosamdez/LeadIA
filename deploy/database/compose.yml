@@ -66,7 +66,8 @@ services:
     volumes:
       - ../../supabase/schema.sql:/migrations/schema.sql:ro
       - ../../supabase/migrations/001_whatsapp.sql:/migrations/001_whatsapp.sql:ro
-    command: [psql, -v, ON_ERROR_STOP=1, -f, /migrations/schema.sql, -f, /migrations/001_whatsapp.sql]
+      - ../../supabase/migrations/002_lead_assignment.sql:/migrations/002_lead_assignment.sql:ro
+    command: [psql, -v, ON_ERROR_STOP=1, -f, /migrations/schema.sql, -f, /migrations/001_whatsapp.sql, -f, /migrations/002_lead_assignment.sql]
     networks: [private]
     mem_limit: 128m
 
