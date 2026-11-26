@@ -1,0 +1,9 @@
+services:
+  webhook:
+    build: .
+    expose:
+      - "3000"
+    environment:
+      WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:?required}
+      META_APP_SECRET: ${META_APP_SECRET:?required}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:?required}
