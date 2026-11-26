@@ -1,21 +1,26 @@
-# Deploy Dokploy
+# Deploy no Dokploy
 
-Os serviços ficam exclusivamente no projeto `thiago-dev`.
+O LeadIA usa o projeto `thiago-dev`. O ambiente ativo com CRM real está em [devleadia.funilsocial.com.br](https://devleadia.funilsocial.com.br/).
 
-| Branch | Ambiente | Serviço | Secret GitHub Actions |
-|---|---|---|---|
-| `dev` | `dev` | `leadia-dev` | `DOKPLOY_WEBHOOK_DEV` |
-| `main` | `production` (prod) | `leadia-prod` | `DOKPLOY_WEBHOOK_PROD` |
+| Origem | Destino | Situação |
+| --- | --- | --- |
+| `dev` | `leadia-dev`, frontend no Dokploy | Ambiente de uso e homologação |
+| `dev` | `leadia-db-dev`, Compose de banco | PostgreSQL, autenticação, API e gateway interno |
+| `dev` | `leadia-whatsapp-dev`, Compose do webhook e worker | Número de teste e ensaio de ponta a ponta em homologação |
+| `main` | GitHub Pages | Publicação de demonstração independente |
+| `main` | `leadia-prod`, frontend no Dokploy | Destino previsto no workflow. URL pública sem confirmação |
 
-O workflow `LeadIA CI/CD` executa lint, constrói a imagem e verifica saúde,
-fallback de rotas SPA e assets antes de chamar o webhook do ambiente.
-Pull requests validam sem disparar deploy. Para promover, faça PR de `dev` para
-`main`. Os webhooks devem ficar somente em secrets, nunca no código.
+## Frontend
 
-No Dokploy, usar origem Git pública, branch correspondente, Dockerfile na raiz,
-porta interna 80 e domínio gerado. Manter autodeploy habilitado para receber o
-webhook; não configurar um webhook direto de push que ignore o CI.
+O workflow `LeadIA CI/CD` executa lint, build Docker e testes de saúde, rotas e assets. Em pushes para `dev` ou `main`, chama o webhook do ambiente. Pull requests executam a validação. O frontend usa a porta interna 80 e recebe a configuração de modo real em runtime no Dokploy.
 
-O container atende o modo demo, com persistência local no navegador. Não inclui
-credenciais Supabase/NVIDIA, nem aplica migrações. Cada origem mantém seu próprio
-localStorage. O deploy existente do GitHub Pages permanece independente.
+Após publicar:
+
+1. Confirme o SHA do deploy na aba **Deployments**.
+2. Verifique `/healthz` para a aplicação e `/api/healthz` para o gateway do CRM.
+3. Abra uma rota protegida em uma sessão sem login. Autentique e confirme que o painel retorna à rota solicitada.
+4. Em mudanças de fluxo, rode o ensaio com uma organização isolada e dados fictícios.
+
+## Banco e WhatsApp
+
+A publicação do frontend e a aplicação de mudanças no banco ou no worker têm etapas próprias. Consulte os runbooks de [banco e autenticação](database/README.md) e [WhatsApp](whatsapp/README.md). Mantenha os segredos nos ambientes correspondentes do GitHub Actions ou do Dokploy.

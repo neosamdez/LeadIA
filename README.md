@@ -1,116 +1,54 @@
 # LeadIA
 
-Projeto acadêmico: **LeadIA – Seu departamento comercial com IA**.
+O LeadIA reúne leads, conversas, etapas do funil e tarefas de retorno em um CRM para pequenas equipes comerciais que atendem por mensagem.
 
-Landing page + painel demo funcional para apresentar a proposta de uma plataforma que automatiza atendimento, qualificação e follow-up de leads para PMEs.
+- **Ambiente com CRM e banco reais:** [LeadIA no Dokploy](https://devleadia.funilsocial.com.br/), branch `dev`.
+- **Versão de demonstração:** [LeadIA no GitHub Pages](https://neosamdez.github.io/LeadIA/), publicação independente da branch `main`.
 
-- **Demo online:** https://neosamdez.github.io/LeadIA/
-- **Repositório:** https://github.com/neosamdez/LeadIA
+## O que a equipe pode fazer
 
-## O que tem no projeto
+| Tela | Uso |
+| --- | --- |
+| Dashboard | Acompanhar leads por etapa, metas e resultados comerciais |
+| Leads | Criar contatos, buscar oportunidades e consultar histórico e próxima ação |
+| Conversas | Ler o histórico, registrar mensagens e acompanhar o atendimento |
+| Pipeline | Acompanhar as etapas Novo, Em atendimento, Qualificado, Proposta, Convertido e Perdido |
+| Alertas | Revisar pendências e organizar follow-ups |
+| Analytics | Explorar o funil, canais e motivos de perda. O gráfico de evolução simulada serve como exemplo |
+| Configurações | Ajustar dados da empresa e opções da organização |
 
-- **Landing page**: proposta de valor, problema, como funciona, segmentos, planos, MVP e FAQ.
-- **Painel demo (funcional no front-end)**:
-  - Dashboard com métricas simuladas e **funil comercial**
-  - **Analytics profissional**: gráficos interativos (Recharts) com troca de tipo (barras/linha/área/pizza), funil, canais, motivos de perda e evolução simulada
-  - **Pipeline Kanban**: arrastar e soltar leads entre etapas do funil comercial
-  - **Central de Alertas**: leads quentes, propostas pendentes, objeções detectadas e perdas sem motivo
-  - **Arquitetura & LGPD**: fluxo técnico, segurança, APIs oficiais da Meta e conformidade
-  - **Detalhe do lead**: drawer com score de conversão, tags, próxima ação sugerida, motivo de perda e timeline
-  - **Conversas com IA (NVIDIA NIM)**: gera respostas em tempo real via API NVIDIA (OpenAI-compatible), com fallback para sugestões simuladas, detecção de objeção, typing indicator e handoff humano. Suporta **Proxy URL** nas Configurações e proxy dev Vite (`/api/nvidia`) para evitar CORS; em produção (GitHub Pages) use um proxy (ex.: `proxy/cloudflare-worker.js`).
-  - **Cenários prontos** para apresentação (novo lead, objeção de preço, conversão)
-  - **Tour guiado** pelo painel
-  - **Resumo executivo** em modal (demo) e seção na landing
-  - Gestão de leads (filtro, status, criação)
-  - Configurações da empresa/IA
-  - Persistência local via `localStorage`
+## Estado da entrega
 
-> Observação: este projeto é uma demonstração acadêmica. Não há integração real com Instagram/WhatsApp/Meta APIs nem backend.
+- **CRM validado no navegador:** cadastro, login, logout, acesso às oito telas autenticadas e persistência de um lead após novo login.
+- **Interface publicada:** menu móvel recolhível e retorno à rota solicitada após entrar ou criar conta. [CI e deploy](https://github.com/neosamdez/LeadIA/actions/runs/45844538418)
+- **WhatsApp em homologação:** webhook, gravação, fila, envio e contingência implementados para o número de teste da Meta. A entrega de uma resposta ao celular com a mesma conversa persistida no CRM ainda depende do ensaio ponta a ponta. [Testes de integração](https://github.com/neosamdez/LeadIA/actions/runs/45741912573)
+- **Claude:** integração opcional no servidor. O worker valida o resultado do modelo e aplica regras comerciais. Sem chamada válida ao Claude, o serviço usa respostas por regra. A configuração no Dokploy e o uso do modelo no ensaio estão pendentes de confirmação.
 
-## Tecnologias
+## Rodar localmente
 
-- React + Vite
-- React Router
-- Lucide React (ícones)
-- CSS customizado
-- GitHub Actions + GitHub Pages (deploy)
-
-## Como rodar localmente
+Requer Node.js 22 para reproduzir o runtime do contêiner.
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
-Build de produção:
+O setup padrão abre o modo de demonstração no navegador. Para configurar o modo real, veja o [guia do banco e do frontend no Dokploy](deploy/database/README.md). A chave da Anthropic é variável do serviço de WhatsApp no servidor.
 
 ```bash
+npm run lint
 npm run build
 npm run preview
+node --test tests/whatsapp.test.mjs
 ```
 
-## Estrutura
+## Documentação
 
-```text
-src/
-  context/        # estado global + persistência local
-  data/           # dados mockados
-  layouts/        # layout do painel
-  pages/          # Landing, Login, Dashboard, Leads, Conversas, Configurações
-.github/workflows # deploy para GitHub Pages
-```
+- [Plano de evolução e critérios de aceite](docs/PLANO_PROJETO_REAL.md)
+- [Ambientes e deploy](deploy/README.md)
+- [Banco, autenticação e isolamento dos dados](deploy/database/README.md)
+- [Configuração e diagnóstico do WhatsApp de teste](deploy/whatsapp/README.md)
 
-## Roteiro sugerido para apresentação
+## Apresentar o sistema
 
-1. Mostrar a **landing page**, o problema e a seção **Resumo executivo em 1 minuto**.
-2. Clicar em **Acessar demo** e entrar no painel.
-3. No **Dashboard**, clicar em **Iniciar tour** para guiar a banca pelo fluxo.
-4. Usar os **Cenários prontos** (novo lead, objeção, conversão) para demonstrar ao vivo.
-5. Mostrar o **Funil comercial** e as métricas de conversão/receita.
-6. Em **Leads/Conversas**, ajustar status e usar **Simular resposta IA**.
-7. Fechar com diferenciais, modelo de negócio, LGPD e próximos passos.
-
-## Como melhorar ainda mais para apresentar o app
-
-### 1. Melhorias rápidas para a apresentação (alto impacto)
-
-- [x] **Modo apresentação guiado**: botão “Iniciar tour” com passos destacando Dashboard → Leads → Conversas → Configurações.
-- [x] **Cenários prontos**: botões “Simular novo lead do Instagram”, “Simular objeção de preço” e “Simular conversão”.
-- [x] **Funil visual**: funil comercial no Dashboard (Novo → Qualificado → Proposta → Convertido).
-- [x] **Resumo executivo**: seção na landing e modal no painel com problema, solução, público, diferencial, modelo e roadmap.
-- [ ] **Dados demo mais ricos**: adicionar mais leads, canais, etiquetas, motivos de perda e histórico temporal para gráficos mais convincentes.
-- [ ] **Capturas/GIFs no README**: incluir imagens do fluxo principal para quem abrir o repositório antes da apresentação.
-
-### 2. Melhorias de produto (experiência do usuário)
-
-- [x] **Funil visual**: gráfico de funil e visão por etapa.
-- [x] **Kanban de pipeline**: arrastar leads entre etapas do funil.
-- [x] **Detalhe do lead**: drawer com timeline, score, tags, próxima ação e motivo de perda.
-- [x] **Respostas sugeridas pela IA**: sugestões contextuais, objeção de preço, handoff humano e typing indicator.
-- [x] **Analytics comercial**: desempenho por canal, motivos de perda e recomendações.
-- [x] **Central de alertas**: leads quentes, propostas pendentes, objeções e perdas sem motivo.
-- [x] **Arquitetura & LGPD**: página técnica para apresentação à banca.
-- [ ] **Filtros avançados**: filtrar por canal, período, valor estimado, responsável e status.
-
-### 3. Melhorias técnicas (para dar mais credibilidade)
-
-- **Backend real**: API (Node/FastAPI) + banco (PostgreSQL/Supabase) para persistir leads e mensagens.
-- **Autenticação real**: login com contas, papéis (admin/vendedor) e proteção de rotas.
-- **Integrações oficiais**: conectar Instagram/WhatsApp via APIs oficiais da Meta, com webhooks e filas.
-- **IA real**: integração com LLM usando base de conhecimento da empresa (RAG), guardrails e handoff para humano.
-- **Testes e qualidade**: testes unitários/e2e (Vitest/Playwright), lint no CI e monitoramento de erros.
-- **Observabilidade**: logs, métricas de latência de resposta, taxa de conversão e auditoria de ações.
-
-### 4. Melhorias de negócio (para a banca)
-
-- **Validação de mercado**: incluir pesquisa com PMEs, personas, dores validadas e hipóteses testadas.
-- **Métricas de negócio**: CAC, LTV, churn estimado, payback e projeção de receita por plano.
-- **Comparativo competitivo**: tabela comparando LeadIA com chatbots comuns, CRMs e atendimento manual.
-- **Estratégia de MVP**: definir claramente o que é MVP, o que é simulado e o que entra nas próximas versões.
-- **Conformidade**: aprofundar LGPD, consentimento, retenção de dados, segurança e limites das APIs da Meta.
-
-## Próximos passos sugeridos (roadmap)
-
-1. **V1 (demo forte)**: tour guiado, cenários prontos, funil visual e página de detalhe do lead.
-2. **V2 (MVP técnico)**: backend + auth + banco + CRUD real de leads/conversas.
-3. **V3 (produto piloto)**: integração com canal oficial, IA com base de conhecimento e dashboard com dados reais.
+Mostre o cadastro, crie um lead fictício, abra o Pipeline e volte ao mesmo lead em uma nova sessão. Use Conversas e Alertas para explicar como a equipe acompanha o histórico e os próximos contatos. Apresente a integração ao vivo pelo celular quando o ensaio confirmar a resposta e a gravação no CRM.

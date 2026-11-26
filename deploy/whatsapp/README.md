@@ -70,3 +70,12 @@ registradas e reconciliadas com a notificação da Meta, sem reenvio automático
 Os logs registram eventos e IDs parciais. Guarde o link do GitHub Actions,
 o SHA e os IDs de deploy. Não coloque tokens, chaves, nomes nem números
 de ensaio no Git ou no relatório.
+
+## Antes de um ensaio no celular
+
+1. Confirme que o webhook está publicado e que a Meta validou o callback e a inscrição em `messages`.
+2. Confirme de dentro do serviço o acesso ao CRM com a credencial do canal e à Graph API com a credencial de envio. Verifique a validade de ambas para o período do ensaio.
+3. Para testar o Claude, preencha `ANTHROPIC_API_KEY` e `CLAUDE_MODEL` no **Environment** do Compose e reaplique o deploy. Com chave configurada, o serviço exige um modelo com prefixo `claude-haiku-`.
+4. Faça o teste com o número da Meta e um celular autorizado. Anote o horário e o ID parcial para correlacionar os registros. Observar `whatsapp_inbound` com `stored` confirma a gravação da entrada. Confirme a resposta no aparelho e recarregue Conversas na organização de ensaio.
+
+Se a entrada não aparecer, confira a tentativa de entrega na Meta e compare o Phone Number ID e o remetente recebido com os valores permitidos no Compose e no canal do banco. Se a entrada for gravada e a resposta não chegar, confira a fila, a resposta da Graph API e o estado de entrega. Verifique a origem da resposta quando o cenário depende do Claude.
