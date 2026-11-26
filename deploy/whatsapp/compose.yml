@@ -1,0 +1,24 @@
+services:
+  webhook:
+    build: .
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:?required}
+      META_APP_SECRET: ${META_APP_SECRET:?required}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:?required}
+      WHATSAPP_TEST_RECIPIENTS: ${WHATSAPP_TEST_RECIPIENTS:?required}
+      META_GRAPH_VERSION: ${META_GRAPH_VERSION:?required}
+      WHATSAPP_ACCESS_TOKEN: ${WHATSAPP_ACCESS_TOKEN:?required}
+      WHATSAPP_CRM_URL: http://leadia-dev-backend:8000
+      WHATSAPP_CRM_TOKEN: ${WHATSAPP_CRM_TOKEN:?required}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      CLAUDE_MODEL: ${CLAUDE_MODEL:-}
+    networks: [dokploy-network]
+    mem_limit: 128m
+    cpus: 0.25
+
+networks:
+  dokploy-network:
+    external: true
