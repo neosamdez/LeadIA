@@ -242,6 +242,10 @@ export default function Landing() {
         <footer className="l-footer">
           <span>LeadIA · Plataforma inteligente de captação, atendimento e conversão de leads com Inteligência Artificial.</span>
           <span>Projeto acadêmico · Demonstração funcional</span>
+          <nav className="privacy-footer-links" aria-label="Privacidade">
+            <Link to="/privacidade">Privacidade</Link>
+            <Link to="/exclusao-de-dados">Exclusão de dados</Link>
+          </nav>
         </footer>
       </div>
     </div>

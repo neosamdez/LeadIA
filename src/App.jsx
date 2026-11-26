@@ -11,6 +11,7 @@ import Kanban from './pages/Kanban';
 import Alertas from './pages/Alertas';
 import Arquitetura from './pages/Arquitetura';
 import Settings from './pages/Settings';
+import { DataDeletion, PrivacyPolicy } from './pages/Privacy';
 
 function Protected({ children }) {
   const location = useLocation();
@@ -43,6 +44,8 @@ export default function App() {
       <BrowserRouter basename={import.meta.env.BASE_URL}>
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/privacidade" element={<PrivacyPolicy />} />
+          <Route path="/exclusao-de-dados" element={<DataDeletion />} />
           <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
           <Route path="/app" element={<Protected><AppLayout /></Protected>}>
             <Route index element={<Dashboard />} />
