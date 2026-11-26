@@ -48,7 +48,7 @@ Para mudanças futuras no schema: revisar migração, validar em dev, criar back
 reimplantar o Compose do banco (migrate precisa terminar com código 0), verificar
 gateway e então publicar frontend. O CI/CD do frontend não substitui esse passo.
 
-Para a atribuição de conversas, o Compose aplica também a migração 002_lead_assignment.sql. Publique primeiro o banco e depois o frontend. Em uma organização de teste, atribua um lead a um membro, recarregue a conversa e confira o registro na Timeline. A alteração fica vinculada à organização do lead.
+Para a atribuição de conversas, o Compose aplica também a migração 002_lead_assignment.sql. Ao aplicar a migração, o banco disponibiliza list_lead_assignees. O controle de atribuição aparece no frontend depois que essa função estiver disponível. Em uma organização de teste, atribua um lead a um membro, recarregue a conversa e confira o registro na Timeline. A alteração fica vinculada à organização do lead.
 
 ## Validação de SQL
 

@@ -315,7 +315,7 @@ export default function Conversations() {
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontSize: 17, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>{lead.name} <span className={`badge ${intent.tone}`} style={{ fontSize: 11 }}><Brain size={11} style={{ marginRight: 4 }} />{intent.label}</span></div>
                   <div style={{ fontSize: 12, color: 'var(--mute)', marginTop: 2 }}>{lead.channel} · {lead.interest} · <span className="badge blue">{lead.status}</span>{whatsapp && lead.whatsappPaused && <> · Automação pausada</>}</div>
-                  {user?.mode === 'real' && <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, fontSize: 13 }}>
+                  {user?.mode === 'real' && members.length > 0 && <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, fontSize: 13 }}>
                     Responsável
                     <select aria-label="Responsável pela conversa" value={lead.ownerId || ''} disabled={!canAssign || Boolean(pendingWrites)}
                       onChange={event => assignLead(lead.id, event.target.value || null)}>

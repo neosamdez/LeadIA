@@ -35,6 +35,8 @@ insert into public.memberships(org_id,user_id,role) values
 
 set local role authenticated;
 select pg_temp.assert_assignment((select count(*) = 3 from public.profiles),'lista limitada aos colegas');
+select pg_temp.assert_assignment((select count(*) = 3 from public.list_lead_assignees(:'org_a')),'lista de responsáveis da organização');
+select pg_temp.assert_assignment((select count(*) = 0 from public.list_lead_assignees('40000000-0000-0000-0000-000000000001')),'organização desconhecida não retorna membros');
 select pg_temp.expect_assignment_denied('30000000-0000-0000-0000-000000000004');
 select pg_temp.expect_assignment_denied('30000000-0000-0000-0000-000000000003');
 

@@ -9,6 +9,17 @@ using (exists (
   where team.user_id = profiles.id and public.is_org_member(team.org_id)
 ));
 
+create or replace function public.list_lead_assignees(p_org_id uuid)
+returns table(user_id uuid, role text, full_name text)
+language sql stable security invoker set search_path = '' as $$
+  select team.user_id, team.role, profiles.full_name
+  from public.memberships team left join public.profiles profiles on profiles.id = team.user_id
+  where team.org_id = p_org_id and public.is_org_member(p_org_id)
+  order by team.created_at, team.user_id;
+$$;
+revoke all on function public.list_lead_assignees(uuid) from public;
+grant execute on function public.list_lead_assignees(uuid) to authenticated;
+
 create index if not exists leads_org_owner_idx on public.leads(org_id,owner_id)
 where owner_id is not null;
 
@@ -62,4 +73,5 @@ create trigger lead_owner_audit after update of owner_id on public.leads
 for each row when (old.owner_id is distinct from new.owner_id)
 execute function public.audit_lead_owner();
 
+notify pgrst, 'reload schema';
 commit;
