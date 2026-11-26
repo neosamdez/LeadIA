@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Bot, ArrowRight, Sparkles, ShieldCheck, BarChart3, MessageSquare, LogIn } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { isRealMode } from '../lib/config';
@@ -13,7 +13,6 @@ const highlights = [
 
 export default function Login() {
   const { login } = useApp();
-  const navigate = useNavigate();
   const realMode = isRealMode();
   const mode = realMode ? 'real' : 'demo';
   const visibleHighlights = realMode ? [
@@ -37,7 +36,6 @@ export default function Login() {
   async function submitDemo(e) {
     e.preventDefault();
     login({ name, company, email: demoEmail, mode: 'demo' });
-    navigate('/app');
   }
 
   async function submitReal(e) {
@@ -53,7 +51,6 @@ export default function Login() {
         email: user?.email || email,
         mode: 'real',
       });
-      navigate('/app');
     } catch (err) {
       setError(err?.message || 'Não foi possível entrar. Verifique suas credenciais.');
     } finally {
@@ -109,7 +106,7 @@ export default function Login() {
           <div style={{ marginBottom: 20 }}>
             <h2 style={{ margin: '0 0 8px', fontSize: 28, lineHeight: 1.15, letterSpacing: '-.03em', fontWeight: 800 }}>Acessar painel</h2>
             <p style={{ color: 'var(--mute)', margin: 0, fontSize: 14, lineHeight: 1.6 }}>
-              {mode === 'real' ? 'Use seu e-mail e senha para entrar no ambiente real.' : 'Use os dados de demonstração abaixo ou personalize para a sua apresentação.'}
+              {mode === 'real' ? 'Entre com seu e-mail e senha.' : 'Use os dados de demonstração abaixo ou personalize para a sua apresentação.'}
             </p>
           </div>
 
@@ -120,7 +117,7 @@ export default function Login() {
             <form onSubmit={submitReal} style={{ display: 'grid', gap: 16 }}>
               <label style={{ display: 'grid', gap: 7, fontSize: 14, fontWeight: 600 }}>
                 E-mail
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@empresa.com" required />
+                <input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@empresa.com" required />
               </label>
               <label style={{ display: 'grid', gap: 7, fontSize: 14, fontWeight: 600 }}>
                 Senha
@@ -157,7 +154,7 @@ export default function Login() {
             <div style={{ fontSize: 12, fontWeight: 700, color: '#93C5FD', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 4 }}>{mode === 'real' ? 'Modo real' : 'Modo demo'}</div>
             <p style={{ fontSize: 13, color: 'var(--mute)', margin: 0, lineHeight: 1.55 }}>
               {mode === 'real'
-                ? 'Os dados ficam salvos no banco da plataforma, separados por organização. Esta etapa ainda não conecta nem envia mensagens pelo WhatsApp.'
+                ? 'Os dados ficam salvos no banco da plataforma, separados por organização. '
                 : 'Sem backend: o acesso é simulado e os dados ficam salvos apenas neste navegador.'}
             </p>
           </div>

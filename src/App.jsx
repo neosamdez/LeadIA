@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -13,9 +13,10 @@ import Arquitetura from './pages/Arquitetura';
 import Settings from './pages/Settings';
 
 function Protected({ children }) {
+  const location = useLocation();
   const { user, authReady, databaseReady, loadError, retryLoad, logout } = useApp();
   if (authReady === false) return <p role="status">Restaurando sessão...</p>;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" replace state={{ returnTo: location.pathname + location.search + location.hash }} />;
   if (user.mode === 'real' && (!databaseReady || loadError)) return <main style={{ padding: 32 }}>
     <h1>{loadError ? 'Não foi possível carregar seus dados' : 'Carregando sua organização...'}</h1>
     {loadError && <><p role="alert">{loadError}</p><button onClick={retryLoad}>Tentar novamente</button></>}
@@ -25,9 +26,14 @@ function Protected({ children }) {
 }
 
 function PublicOnly({ children }) {
+  const { state } = useLocation();
   const { user, authReady } = useApp();
   if (authReady === false) return <p role="status">Restaurando sessão...</p>;
-  if (user) return <Navigate to="/app" replace />;
+  if (user) {
+    const returnTo = state?.returnTo;
+    const destination = typeof returnTo === 'string' && /^\/app(?:[/?#]|$)/.test(returnTo) ? returnTo : '/app';
+    return <Navigate to={destination} replace />;
+  }
   return children;
 }
 
