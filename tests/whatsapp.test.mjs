@@ -10,8 +10,9 @@ const channel = { verifyToken: 'fake-verify', appSecret: 'fake-secret', phoneNum
 
 test('webhook confirma desafio, exige HMAC do corpo bruto e filtra número e contato', async t => {
   const calls = [];
+  const logs = [];
   let rejectWrite = true;
-  const server = createWebhook({ ...channel, log() {}, rpc: async (name, args) => {
+  const server = createWebhook({ ...channel, log: line => logs.push(JSON.parse(line)), rpc: async (name, args) => {
     calls.push([name, args]);
     if (rejectWrite) throw new Error('database unavailable');
     return 'stored';
@@ -34,10 +35,16 @@ test('webhook confirma desafio, exige HMAC do corpo bruto e filtra número e con
   const signature = 'sha256=' + createHmac('sha256', channel.appSecret).update(body).digest('hex');
   const send = (value, token) => fetch(url, { method: 'POST', body: value, headers: { 'X-Hub-Signature-256': token } });
   assert.equal((await send(JSON.stringify(payload), signature)).status, 403);
+  assert.deepEqual(logs, [{ event: 'whatsapp_webhook_rejected', reason: 'invalid_signature', status: 403 }]);
   assert.equal(calls.length, 0);
   assert.equal((await send(body, signature)).status, 503);
+  assert.deepEqual(logs.at(-1), { event: 'whatsapp_webhook_retry', status: 503 });
   rejectWrite = false;
   assert.equal((await send(body, signature)).status, 200);
+  assert.deepEqual(logs.slice(-2), [
+    { event: 'whatsapp_inbound', id: '.inbound', result: 'stored' },
+    { event: 'whatsapp_webhook_processed', status: 200 },
+  ]);
   assert.deepEqual(calls.map(([name, args]) => [name, args.p_from, args.p_message_id]), [
     ['whatsapp_ingest', job.recipient, 'wamid.inbound'], ['whatsapp_ingest', job.recipient, 'wamid.inbound'],
   ]);
