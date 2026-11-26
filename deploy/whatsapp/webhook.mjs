@@ -59,6 +59,7 @@ export function createWebhook({ verifyToken, appSecret, phoneNumberId, recipient
       const body = Buffer.concat(chunks);
       const hash = createHmac('sha256', appSecret).update(body).digest('hex');
       if (!matches('sha256=' + hash, request.headers['x-hub-signature-256'])) {
+        log(JSON.stringify({ event: 'whatsapp_webhook_rejected', reason: 'invalid_signature', status: 403 }));
         return reply(response, 403);
       }
 
@@ -103,9 +104,10 @@ export function createWebhook({ verifyToken, appSecret, phoneNumberId, recipient
           }
         }
       }
+      log(JSON.stringify({ event: 'whatsapp_webhook_processed', status: 200 }));
       return reply(response, 200);
     } catch {
-      log(JSON.stringify({ event: 'whatsapp_webhook_retry' }));
+      log(JSON.stringify({ event: 'whatsapp_webhook_retry', status: 503 }));
       return reply(response, 503);
     }
   });
