@@ -65,7 +65,8 @@ services:
       PGPASSWORD: ${POSTGRES_PASSWORD:?required}
     volumes:
       - ../../supabase/schema.sql:/migrations/schema.sql:ro
-    command: [psql, -v, ON_ERROR_STOP=1, -f, /migrations/schema.sql]
+      - ../../supabase/migrations/001_whatsapp.sql:/migrations/001_whatsapp.sql:ro
+    command: [psql, -v, ON_ERROR_STOP=1, -f, /migrations/schema.sql, -f, /migrations/001_whatsapp.sql]
     networks: [private]
     mem_limit: 128m
 

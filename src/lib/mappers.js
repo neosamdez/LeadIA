@@ -16,6 +16,8 @@ export function dbLeadToApp(row) {
     tags: row.tags || [],
     nextAction: row.next_action || '',
     lossReason: row.loss_reason || '',
+    whatsappConnected: row.external_id?.startsWith('whatsapp:') || false,
+    whatsappPaused: row.whatsapp_paused === true,
     _db: true,
   };
 }
@@ -45,6 +47,7 @@ export function dbMessageToApp(row) {
     text: row.content,
     time: row.created_at ? new Date(row.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '',
     id: row.id,
+    whatsappDelivery: row.meta?.channel === 'whatsapp' ? row.meta.delivery : undefined,
   };
 }
 

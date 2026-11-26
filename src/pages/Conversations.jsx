@@ -33,8 +33,13 @@ function getSuggestions(lastClientText = '') {
   ];
 }
 
+const whatsappDeliveryLabels = {
+  accepted: 'Aceita pela Meta', sent: 'Enviada', delivered: 'Entregue', read: 'Lida',
+  failed: 'Falha de envio', uncertain: 'Envio a confirmar',
+};
+
 export default function Conversations() {
-  const { leads, conversations, sendMessage, updateLeadStatus, settings, recordEvent, leadEvents, addFollowUp } = useApp();
+  const { leads, conversations, sendMessage, updateLeadStatus, settings, recordEvent, leadEvents, addFollowUp, setWhatsAppPause, pendingWrites } = useApp();
   const { leadId } = useParams();
   const navigate = useNavigate();
   const [selected, setSelected] = useState(leadId || leads[0]?.id);
@@ -55,9 +60,12 @@ export default function Conversations() {
 
   const lead = useMemo(() => leads.find(l => l.id === selected) || leads[0], [leads, selected]);
   const msgs = conversations[lead?.id] || [];
+  const whatsapp = lead?.whatsappConnected;
+  const lastClassification = (leadEvents[lead?.id] || []).findLast(event => event.type === 'whatsapp' && event.meta?.intent);
   const lastClient = [...msgs].reverse().find(m => m.from === 'client');
   const suggestions = getSuggestions(lastClient?.text || '');
   const intent = (() => {
+    if (whatsapp) return { label: lastClassification?.text || 'Aguardando classificação', tone: 'blue' };
     const t = (lastClient?.text || '').toLowerCase();
     if (!t) return { label: 'Sem mensagem', tone: 'blue' };
     if (/caro|preço|alto|desconto|valor/.test(t)) return { label: 'Objeção de preço', tone: 'yellow' };
@@ -256,7 +264,7 @@ export default function Conversations() {
               <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontSize: 17, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>{lead.name} <span className={`badge ${intent.tone}`} style={{ fontSize: 11 }}><Brain size={11} style={{ marginRight: 4 }} />{intent.label}</span></div>
-                  <div style={{ fontSize: 12, color: 'var(--mute)', marginTop: 2 }}>{lead.channel} · {lead.interest} · <span className="badge blue">{lead.status}</span></div>
+                  <div style={{ fontSize: 12, color: 'var(--mute)', marginTop: 2 }}>{lead.channel} · {lead.interest} · <span className="badge blue">{lead.status}</span>{whatsapp && lead.whatsappPaused && <> · Automação pausada</>}</div>
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   {[
@@ -264,12 +272,15 @@ export default function Conversations() {
                     { label: copied ? 'Copiado' : 'Resumo', icon: copied ? CheckCircle2 : Copy, onClick: copyLeadSummary },
                     { label: 'Proposta', icon: FileText, onClick: () => setShowProposal(true) },
                     { label: 'Follow-up', icon: CalendarPlus, onClick: () => { addFollowUp({ leadId: lead.id, title: `Follow-up: ${lead.name}`, note: `Retomar ${lead.interest}`, when: 'Amanhã' }); recordEvent(lead.id, { type: 'event', text: 'Follow-up agendado pelo consultor' }); } },
-                    { label: 'Handoff', icon: UserCheck, onClick: handoff },
-                  ].map(({ label, icon: Icon, onClick }) => (
-                    <button key={label} className="btn btn-sm btn-outline" style={{ padding: '5px 9px', fontSize: 12 }} onClick={onClick}><Icon size={13} /> {label}</button>
+                    whatsapp
+                      ? { label: lead.whatsappPaused ? 'Retomar automação' : 'Pausar automação', icon: UserCheck,
+                        onClick: () => setWhatsAppPause(lead.id, !lead.whatsappPaused), disabled: Boolean(pendingWrites) }
+                      : { label: 'Handoff', icon: UserCheck, onClick: handoff },
+                  ].map(({ label, icon: Icon, onClick, disabled }) => (
+                    <button key={label} className="btn btn-sm btn-outline" style={{ padding: '5px 9px', fontSize: 12 }} onClick={onClick} disabled={disabled}><Icon size={13} /> {label}</button>
                   ))}
-                  <button className="btn btn-sm btn-outline" style={{ padding: '5px 9px', fontSize: 12 }} onClick={() => sendAI()} disabled={typing || simulating}><Sparkles size={13} /> IA</button>
-                  <button className="btn btn-sm btn-primary" style={{ padding: '5px 9px', fontSize: 12 }} onClick={simulateNegotiation} disabled={typing || simulating}><Zap size={13} /> {simulating ? 'Simulando...' : 'Simular'}</button>
+                  {!whatsapp && <><button className="btn btn-sm btn-outline" style={{ padding: '5px 9px', fontSize: 12 }} onClick={() => sendAI()} disabled={typing || simulating}><Sparkles size={13} /> IA</button>
+                  <button className="btn btn-sm btn-primary" style={{ padding: '5px 9px', fontSize: 12 }} onClick={simulateNegotiation} disabled={typing || simulating}><Zap size={13} /> {simulating ? 'Simulando...' : 'Simular'}</button></>}
                 </div>
               </div>
 
@@ -288,7 +299,8 @@ export default function Conversations() {
                       }}>
                         {m.text}
                         <div style={{ fontSize: 11, color: 'var(--mute)', marginTop: 4, display: 'flex', gap: 4, alignItems: 'center' }}>
-                          {isClient ? <User size={11} /> : <Bot size={11} />} {isClient ? 'Cliente' : isIA ? 'LeadIA' : 'Consultor'} · {m.time}
+                          {isClient ? <User size={11} /> : <Bot size={11} />} {isClient ? 'Cliente' : isIA ? 'LeadIA' : whatsapp ? 'Nota interna' : 'Consultor'} · {m.time}
+                          {m.whatsappDelivery && <> · {whatsappDeliveryLabels[m.whatsappDelivery]}</>}
                         </div>
                       </div>
                     </div>
@@ -312,7 +324,7 @@ export default function Conversations() {
               </div>
 
               <div style={{ padding: 12, borderTop: '1px solid var(--line)', display: 'grid', gap: 8 }}>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                {!whatsapp && <><div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                   <span style={{ fontSize: 11, color: 'var(--mute)', display: 'flex', gap: 4, alignItems: 'center', marginRight: 2 }}><Sparkles size={12} /> Playbooks:</span>
                   {[['qualificar', 'Qualificar'], ['objeção', 'Objeção'], ['proposta', 'Proposta'], ['agendar', 'Agendar'], ['recuperar', 'Recuperar']].map(([key, label]) => (
                     <button key={key} className="btn btn-sm btn-outline" style={{ fontSize: 11, padding: '4px 8px' }} disabled={typing || simulating} onClick={() => sendAI(undefined, key)}>{label}</button>
@@ -324,10 +336,10 @@ export default function Conversations() {
                       {s.length > 60 ? s.slice(0, 60) + '...' : s}
                     </button>
                   ))}
-                </div>
+                </div></>}
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <input value={draft} onChange={e => setDraft(e.target.value)} placeholder="Digite uma mensagem como consultor..." onKeyDown={e => { if (e.key === 'Enter') send('consultor'); }} />
-                  <button className="btn btn-primary btn-sm" onClick={() => send('consultor')}><Send size={15} /> Enviar</button>
+                  <input value={draft} onChange={e => setDraft(e.target.value)} placeholder={whatsapp ? 'Escreva uma nota interna para a equipe' : 'Digite uma mensagem como consultor...'} onKeyDown={e => { if (e.key === 'Enter') send('consultor'); }} />
+                  <button className="btn btn-primary btn-sm" onClick={() => send('consultor')}><Send size={15} /> {whatsapp ? 'Salvar nota' : 'Enviar'}</button>
                 </div>
               </div>
             </>

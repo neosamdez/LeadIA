@@ -49,7 +49,9 @@ export default function RealAppProvider({ children }) {
   const principal = useRef(null);
   const org = useRef(null);
   const readVersion = useRef(0);
+  const lastSnapshot = useRef(null);
   const userId = session?.user?.id;
+  const databaseReady = Boolean(data);
 
   useEffect(() => {
     let active = true;
@@ -61,6 +63,7 @@ export default function RealAppProvider({ children }) {
         principal.current = id;
         org.current = null;
         readVersion.current++;
+        lastSnapshot.current = null;
         setData(null); setOrganization(null); setLoadError(''); setSyncError(''); setPendingWrites(0);
       }
       setSession(next);
@@ -80,7 +83,12 @@ export default function RealAppProvider({ children }) {
     if (!expected || !orgId) return;
     const version = ++readVersion.current;
     const next = await loadOrganization(orgId);
-    if (principal.current === expected && version === readVersion.current) setData(next);
+    if (principal.current !== expected || version !== readVersion.current) return;
+    const snapshot = JSON.stringify(next);
+    if (snapshot !== lastSnapshot.current) {
+      lastSnapshot.current = snapshot;
+      setData(previous => ({ ...next, dismissedAlerts: previous?.dismissedAlerts || [] }));
+    }
   }, []);
 
   useEffect(() => {
@@ -96,6 +104,18 @@ export default function RealAppProvider({ children }) {
     })().catch(err => { if (!cancelled) setLoadError(err.message || 'Não foi possível carregar o banco.'); });
     return () => { cancelled = true; };
   }, [userId, retry, refresh]);
+
+  useEffect(() => {
+    if (!organization?.id || !databaseReady || pendingWrites) return;
+    let active = true;
+    let timer;
+    async function poll() {
+      if (document.visibilityState === 'visible') await refresh().catch(() => {});
+      if (active) timer = setTimeout(poll, 4000);
+    }
+    timer = setTimeout(poll, 4000);
+    return () => { active = false; clearTimeout(timer); };
+  }, [organization?.id, databaseReady, pendingWrites, refresh]);
 
   async function mutate(operation) {
     const expected = principal.current;
@@ -124,12 +144,12 @@ export default function RealAppProvider({ children }) {
   } : null;
   const api = {
     ...(data || empty), user, orgId: organization?.id || null, authReady,
-    databaseReady: Boolean(data), loadError, syncError, pendingWrites,
+    databaseReady, loadError, syncError, pendingWrites,
     retryLoad: () => { setLoadError(''); setRetry(n => n + 1); }, clearSyncError: () => setSyncError(''),
     // A sessão válida chega exclusivamente do serviço de autenticação.
     login: noDemoAction,
     logout: async () => {
-      principal.current = null; org.current = null; readVersion.current++;
+      principal.current = null; org.current = null; readVersion.current++; lastSnapshot.current = null;
       setSession(null); setData(null); setOrganization(null); setPendingWrites(0);
       await signOut().catch(err => setLoadError(err.message));
     },
@@ -138,6 +158,7 @@ export default function RealAppProvider({ children }) {
     updateLeadStatus: (id, status) => mutate(() => leadsService.updateLead(id, { status })),
     deleteLead: id => mutate(() => leadsService.deleteLead(id)),
     sendMessage: (leadId, message) => mutate(() => conversationsService.appendMessage(leadId, message)),
+    setWhatsAppPause: (leadId, paused) => mutate(() => conversationsService.setWhatsAppPause(leadId, paused)),
     recordEvent: (leadId, event) => mutate(async orgId => {
       const { error } = await requireSupabase().from('lead_events').insert({ org_id: orgId, lead_id: leadId,
         type: event.type || 'event', text: event.text, created_by: userId });

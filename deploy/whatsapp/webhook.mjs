@@ -1,9 +1,13 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { createServer } from 'node:http';
 import { pathToFileURL } from 'node:url';
+import { createRpc, runWorker } from './worker.mjs';
 
 const endpoint = '/webhooks/whatsapp';
 const maxBodyBytes = 1024 * 1024;
+const phone = /^[1-9][0-9]{6,14}$/;
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const deliveries = new Set(['sent', 'delivered', 'read', 'failed']);
 
 function matches(expected, supplied) {
   const left = Buffer.from(expected);
@@ -16,8 +20,8 @@ function reply(response, status, body = '') {
   response.end(body);
 }
 
-export function createWebhook({ verifyToken, appSecret, phoneNumberId, onDelivery = console.log }) {
-  if (!verifyToken || !appSecret || !phoneNumberId) {
+export function createWebhook({ verifyToken, appSecret, phoneNumberId, recipients, rpc, log = console.log }) {
+  if (!verifyToken || !appSecret || !phoneNumberId || !recipients?.size || !rpc) {
     throw new Error('WhatsApp test configuration is incomplete');
   }
 
@@ -74,23 +78,63 @@ export function createWebhook({ verifyToken, appSecret, phoneNumberId, onDeliver
         for (const change of entry.changes) {
           const value = change?.value;
           if (change?.field !== 'messages' || value?.metadata?.phone_number_id !== phoneNumberId) continue;
-          const messages = Array.isArray(value.messages) ? value.messages.length : 0;
-          const statuses = Array.isArray(value.statuses) ? value.statuses.length : 0;
-          onDelivery(JSON.stringify({ event: 'whatsapp_test_delivery', messages, statuses }));
+          for (const message of Array.isArray(value.messages) ? value.messages : []) {
+            const from = message?.from;
+            const content = message?.text?.body;
+            if (message?.type !== 'text' || !phone.test(from ?? '') || !recipients.has(from)
+              || typeof message.id !== 'string' || !message.id || message.id.length > 512
+              || typeof content !== 'string' || !content.trim() || content.length > 10000
+              || !/^[0-9]{1,10}$/.test(message.timestamp ?? '')) continue;
+            const contact = Array.isArray(value.contacts) && value.contacts.find(item => item?.wa_id === from);
+            const name = typeof contact?.profile?.name === 'string' ? contact.profile.name.slice(0, 160) : null;
+            const result = await rpc('whatsapp_ingest', {
+              p_phone_id: phoneNumberId, p_from: from, p_name: name, p_message_id: message.id,
+              p_content: content.trim(), p_received_at: new Date(Number(message.timestamp) * 1000).toISOString(),
+            });
+            log(JSON.stringify({ event: 'whatsapp_inbound', id: message.id.slice(-8), result }));
+          }
+          for (const status of Array.isArray(value.statuses) ? value.statuses : []) {
+            if (!deliveries.has(status?.status) || !recipients.has(status?.recipient_id)
+              || typeof status.id !== 'string' || !status.id || status.id.length > 512) continue;
+            const job = uuid.test(status.biz_opaque_callback_data ?? '') ? status.biz_opaque_callback_data : null;
+            if (await rpc('whatsapp_finish', { p_job: job, p_delivery: status.status, p_outbound_id: status.id })) {
+              log(JSON.stringify({ event: 'whatsapp_delivery', id: status.id.slice(-8), result: status.status }));
+            }
+          }
         }
       }
       return reply(response, 200);
     } catch {
-      return reply(response, 500);
+      log(JSON.stringify({ event: 'whatsapp_webhook_retry' }));
+      return reply(response, 503);
     }
   });
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const server = createWebhook({
+  const config = {
     verifyToken: process.env.WHATSAPP_VERIFY_TOKEN,
     appSecret: process.env.META_APP_SECRET,
     phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
-  });
+    recipients: new Set((process.env.WHATSAPP_TEST_RECIPIENTS ?? '').split(',').map(value => value.trim()).filter(Boolean)),
+    graphVersion: process.env.META_GRAPH_VERSION,
+    accessToken: process.env.WHATSAPP_ACCESS_TOKEN,
+    crmUrl: process.env.WHATSAPP_CRM_URL?.replace(/\/$/, ''),
+    crmToken: process.env.WHATSAPP_CRM_TOKEN,
+    claudeKey: process.env.ANTHROPIC_API_KEY,
+    claudeModel: process.env.CLAUDE_MODEL,
+  };
+  if (!/^v[0-9]+\.[0-9]+$/.test(config.graphVersion ?? '') || !/^[0-9]+$/.test(config.phoneNumberId ?? '')
+    || !config.crmUrl || !config.crmToken || !config.accessToken || [...config.recipients].some(value => !phone.test(value))
+    || (config.claudeKey && !/^claude-haiku-/.test(config.claudeModel ?? ''))) {
+    throw new Error('WhatsApp dev worker configuration is incomplete');
+  }
+  const rpc = createRpc(config);
+  const server = createWebhook({ ...config, rpc });
+  const stop = new AbortController();
+  for (const signal of ['SIGTERM', 'SIGINT']) {
+    process.once(signal, () => { stop.abort(); server.close(); });
+  }
   server.listen(3000, '0.0.0.0');
+  await runWorker(rpc, config, stop.signal);
 }

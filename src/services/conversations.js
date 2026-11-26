@@ -51,3 +51,9 @@ export async function addMessage(orgId, { conversationId, leadId, sender, conten
   if (error) throw error;
   return data;
 }
+
+export async function setWhatsAppPause(leadId, paused) {
+  const { data, error } = await requireSupabase().rpc('set_whatsapp_pause', { p_lead: leadId, p_pause: paused });
+  if (error) throw error;
+  return data;
+}
