@@ -29,6 +29,14 @@
 .page-head h1 { margin: 0; font-size: clamp(28px, 3vw, 38px); line-height: 1.1; letter-spacing: -.03em; font-weight: 800; }
 .page-head p { margin: 6px 0 0; color: var(--mute); }
 
+.conversation-workspace {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  height: min(72vh, 720px);
+  min-height: 560px;
+  overflow: hidden;
+}
+
 @media (max-width: 900px) {
   .app-shell { grid-template-columns: 1fr; }
   .sidebar { position: static; height: auto; padding: 12px 16px; }
@@ -45,7 +53,11 @@
   .app-main [style*="repeat(5"] { grid-template-columns: repeat(2, 1fr) !important; }
   .app-main [style*="repeat(6"] { grid-template-columns: repeat(2, 1fr) !important; }
   .app-main [style*="1.2fr"], .app-main [style*="1.5fr"] { grid-template-columns: 1fr !important; }
-  .app-main [style*="320px 1fr"] { grid-template-columns: 1fr !important; }
+  .conversation-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: clamp(220px, 32vh, 270px) minmax(0, 1fr);
+  }
+  .conversation-workspace > :first-child { border-bottom: 1px solid var(--line); }
 }
 @media (max-width: 600px) {
   .app-main { padding: 14px; }

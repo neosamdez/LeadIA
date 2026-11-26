@@ -33,6 +33,10 @@ function getSuggestions(lastClientText = '') {
   ];
 }
 
+function normalizeSearch(value) {
+  return value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+}
+
 const whatsappDeliveryLabels = {
   accepted: 'Aceita pela Meta', sent: 'Enviada', delivered: 'Entregue', read: 'Lida',
   failed: 'Falha de envio', uncertain: 'Envio a confirmar',
@@ -44,6 +48,8 @@ export default function Conversations() {
   const navigate = useNavigate();
   const [selected, setSelected] = useState(leadId || leads[0]?.id);
   const [draft, setDraft] = useState('');
+  const [search, setSearch] = useState('');
+  const [inboxFilter, setInboxFilter] = useState('all');
   const [typing, setTyping] = useState(false);
   const [simulating, setSimulating] = useState(false);
   const [aiError, setAiError] = useState('');
@@ -59,6 +65,13 @@ export default function Conversations() {
   useEffect(() => () => { clearTimeout(typingTimer.current); abortRef.current?.abort(); }, []);
 
   const lead = useMemo(() => leads.find(l => l.id === selected) || leads[0], [leads, selected]);
+  const query = normalizeSearch(search);
+  const visibleLeads = leads.filter(item => {
+    if (inboxFilter === 'whatsapp' && item.channel !== 'WhatsApp') return false;
+    if (inboxFilter === 'paused' && !(item.whatsappConnected && item.whatsappPaused)) return false;
+    const searchable = [item.name, item.company, item.phone, item.interest, item.lastMessage].join(" ");
+    return !query || normalizeSearch(searchable).includes(query);
+  });
   const msgs = conversations[lead?.id] || [];
   const whatsapp = lead?.whatsappConnected;
   const lastClassification = (leadEvents[lead?.id] || []).findLast(event => event.type === 'whatsapp' && event.meta?.intent);
@@ -241,11 +254,22 @@ export default function Conversations() {
         </div>
       </div>
 
-      <div className="card" style={{ display: 'grid', gridTemplateColumns: '320px 1fr', height: 'min(72vh, 720px)', minHeight: 560, overflow: 'hidden' }}>
+      <div className="card conversation-workspace">
         <div style={{ borderRight: '1px solid var(--line)', background: 'var(--surf-2)', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-          <div style={{ padding: 14, borderBottom: '1px solid var(--line)', fontWeight: 700, fontSize: 14, color: 'var(--mute)' }}>Caixa de entrada</div>
+          <div style={{ padding: 14, borderBottom: '1px solid var(--line)', display: 'grid', gap: 8 }}>
+            <strong style={{ fontSize: 14 }}>Caixa de entrada</strong>
+            <input type="search" aria-label="Buscar na caixa de entrada" placeholder="Nome, interesse ou mensagem" value={search} onChange={event => setSearch(event.target.value)} />
+            <select aria-label="Filtrar caixa de entrada" value={inboxFilter} onChange={event => setInboxFilter(event.target.value)}>
+              <option value="all">Todas as conversas</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="paused">Automação pausada</option>
+            </select>
+          </div>
           <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
-            {leads.map(l => (
+            {visibleLeads.length === 0 && <p role="status" style={{ padding: '0 14px', fontSize: 13, color: 'var(--mute)' }}>
+              {leads.length ? 'Nenhuma conversa corresponde à busca e ao filtro.' : 'Os contatos aparecerão aqui quando forem adicionados ao CRM.'}
+            </p>}
+            {visibleLeads.map(l => (
               <button key={l.id} onClick={() => pick(l.id)} style={{ width: '100%', textAlign: 'left', padding: 14, border: 0, borderBottom: '1px solid var(--line)', background: l.id === lead?.id ? 'var(--surf-3)' : 'transparent', cursor: 'pointer' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                   <strong style={{ fontSize: 14, color: 'var(--ink)' }}>{l.name}</strong>
