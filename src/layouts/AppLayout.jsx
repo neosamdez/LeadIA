@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, MessageSquare, BarChart3, LayoutGrid, Bell, Shield, Settings, LogOut, Bot, Menu, X, Sun } from 'lucide-react';
+import { LayoutDashboard, Users, MessageSquare, BarChart3, LayoutGrid, Bell, Shield, Settings, LogOut, Menu, X, Sun } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Tour from '../components/Tour';
 import './AppLayout.css';
@@ -26,8 +26,8 @@ export default function AppLayout() {
       <aside className={menuOpen ? "sidebar sidebar-open" : "sidebar"}>
         <div className="sidebar-top">
           <Link className="sidebar-brand" to="/">
-            <div className="brand-mark"><Bot size={20} /></div>
-            <span>Lead<b>IA</b></span>
+            <span className="brand-mark" aria-hidden="true">L</span>
+            <span>LeadIA</span>
           </Link>
           <button type="button" className="btn btn-ghost sidebar-toggle" aria-expanded={menuOpen} aria-controls="sidebar-nav sidebar-account" onClick={() => setMenuOpen(open => !open)}>
             {menuOpen ? <X size={18} /> : <Menu size={18} />} Menu
@@ -54,9 +54,9 @@ export default function AppLayout() {
         </div>
       </aside>
       <main className="app-main">
-        {pendingWrites > 0 && <p role="status" aria-live="polite">Salvando no banco...</p>}
-        {syncError && <div role="alert" style={{ padding: 16, marginBottom: 16, border: '1px solid #f87171', borderRadius: 8 }}>
-          <p>{syncError}</p><button onClick={clearSyncError}>Fechar aviso</button>
+        {pendingWrites > 0 && <p className="sync-status" role="status" aria-live="polite">Salvando no banco…</p>}
+        {syncError && <div className="sync-alert" role="alert">
+          <p>{syncError}</p><button type="button" className="btn btn-sm btn-outline" onClick={clearSyncError}>Fechar aviso</button>
         </div>}
         <Outlet />
       </main>

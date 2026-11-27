@@ -118,7 +118,7 @@ export default function Hoje() {
         </section>
       ) : (
         <section className="card hoje-empty">
-          <CheckCircle2 size={20} color="#34D399" />
+          <CheckCircle2 size={20} color="#15803D" />
           <div>
             <h2>Nenhum retorno pendente{ownerId ? ' atribuído a você' : ''}.</h2>
             <p>Agende o próximo passo de um lead abaixo ou em Conversas.</p>

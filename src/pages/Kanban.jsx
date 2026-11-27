@@ -6,8 +6,8 @@ import { channelOptions } from '../data/mockData';
 
 const columns = ['Novo', 'Em atendimento', 'Qualificado', 'Proposta', 'Convertido', 'Perdido'];
 const colColor = {
-  'Novo': '#60A5FA', 'Em atendimento': '#FBBF24', 'Qualificado': '#A78BFA',
-  'Proposta': '#FF5A52', 'Convertido': '#34D399', 'Perdido': '#94A3B3'
+  'Novo': '#1D4ED8', 'Em atendimento': '#B45309', 'Qualificado': '#6D28D9',
+  'Proposta': '#0F766E', 'Convertido': '#15803D', 'Perdido': '#57534E'
 };
 
 export default function Kanban() {
@@ -62,7 +62,7 @@ export default function Kanban() {
             onDragOver={(e) => { e.preventDefault(); setOverCol(col); }}
             onDragLeave={() => setOverCol(null)}
             onDrop={() => onDrop(col)}
-            style={{ minHeight: 420, background: overCol === col ? 'rgba(255,90,82,.06)' : 'rgba(255,255,255,.02)', border: `1px solid ${overCol === col ? 'rgba(255,90,82,.35)' : 'var(--line)'}`, borderRadius: 14, padding: 12, transition: '.2s' }}
+            style={{ minHeight: 420, background: overCol === col ? '#F0FDFA' : '#FAFAF9', border: `1px solid ${overCol === col ? '#99F6E4' : 'var(--line)'}`, borderRadius: 8, padding: 12, transition: '.2s' }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13 }}>
@@ -77,7 +77,7 @@ export default function Kanban() {
                   draggable
                   onDragStart={() => setDragId(l.id)}
                   onDragEnd={() => { setDragId(null); setOverCol(null); }}
-                  style={{ padding: 12, borderRadius: 12, background: 'var(--surf)', border: '1px solid var(--line)', cursor: 'grab', opacity: dragId === l.id ? 0.5 : 1, boxShadow: '0 4px 14px rgba(0,0,0,.12)' }}
+                  style={{ padding: 12, borderRadius: 8, background: 'var(--surf)', border: '1px solid var(--line)', cursor: 'grab', opacity: dragId === l.id ? 0.5 : 1, boxShadow: '0 4px 14px rgba(28,25,23,.08)' }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
                     <div style={{ fontWeight: 700, fontSize: 14 }}>{l.name}</div>
@@ -86,9 +86,9 @@ export default function Kanban() {
                   <div style={{ fontSize: 12, color: 'var(--mute)', marginBottom: 8 }}>{l.interest}</div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                     <span className="badge blue" style={{ fontSize: 11 }}>{l.channel}</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#FCD34D' }}>R$ {l.value}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#B45309' }}>R$ {l.value}</span>
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--mute)', marginTop: 6 }}>Score: <span style={{ color: (l.score ?? 60) >= 80 ? '#6EE7B7' : (l.score ?? 60) >= 60 ? '#FCD34D' : '#FF8A84', fontWeight: 700 }}>{l.score ?? 60}</span></div>
+                  <div style={{ fontSize: 11, color: 'var(--mute)', marginTop: 6 }}>Score: <span style={{ color: (l.score ?? 60) >= 80 ? '#15803D' : (l.score ?? 60) >= 60 ? '#B45309' : '#B91C1C', fontWeight: 700 }}>{l.score ?? 60}</span></div>
                   <button className="btn btn-ghost btn-sm" style={{ marginTop: 8, width: '100%', justifyContent: 'center', fontSize: 12 }} onClick={() => navigate(`/app/conversas/${l.id}`)}>
                     Abrir chat <ArrowRight size={12} />
                   </button>

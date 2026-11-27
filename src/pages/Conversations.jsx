@@ -351,7 +351,7 @@ export default function Conversations() {
                   return (
                     <div key={i} style={{ alignSelf: isClient ? 'flex-start' : 'flex-end', maxWidth: '78%' }}>
                       <div style={{
-                        padding: '10px 13px', borderRadius: 16,
+                        padding: '10px 13px', borderRadius: 8,
                         borderBottomLeftRadius: isClient ? 4 : 16, borderBottomRightRadius: isClient ? 16 : 4,
                         background: isClient ? 'var(--surf-3)' : isIA ? 'var(--wa-bg)' : 'var(--blue-bg)',
                         color: 'var(--ink)', fontSize: 14, lineHeight: 1.45
@@ -367,14 +367,14 @@ export default function Conversations() {
                 })}
                 {typing && (
                   <div style={{ alignSelf: 'flex-end', maxWidth: '78%' }}>
-                    <div style={{ padding: '10px 13px', borderRadius: 16, borderBottomRightRadius: 4, background: 'var(--wa-bg)', color: 'var(--mute)', fontSize: 14 }}>
+                    <div style={{ padding: '10px 13px', borderRadius: 8, borderBottomRightRadius: 4, background: 'var(--wa-bg)', color: 'var(--mute)', fontSize: 14 }}>
                       <Bot size={12} style={{ marginRight: 6 }} /> {isNvidiaConfigured(settings) ? 'LeadIA (NVIDIA) está gerando resposta...' : 'LeadIA está digitando...'}
                     </div>
                   </div>
                 )}
                 {aiError && (
                   <div style={{ alignSelf: 'flex-end', maxWidth: '78%' }}>
-                    <div style={{ padding: '10px 13px', borderRadius: 12, background: 'rgba(255,90,82,.12)', color: '#FFB4AF', fontSize: 13, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                    <div style={{ padding: '10px 13px', borderRadius: 8, background: '#F0FDFA', color: '#115E59', fontSize: 13, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                       <AlertCircle size={14} style={{ marginTop: 2, flexShrink: 0 }} /> <span>{aiError}</span>
                     </div>
                   </div>
@@ -406,7 +406,7 @@ export default function Conversations() {
         </div>
       </div>
       {showTimeline && lead && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,12,.55)', display: 'flex', justifyContent: 'flex-end', zIndex: 60 }} onClick={() => setShowTimeline(false)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(28,25,23,.35)', display: 'flex', justifyContent: 'flex-end', zIndex: 60 }} onClick={() => setShowTimeline(false)}>
           <div className="card" onClick={(e) => e.stopPropagation()} style={{ width: 'min(520px, 100%)', height: '100%', borderRadius: '16px 0 0 16px', padding: 24, overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 16 }}>
               <div>
@@ -423,7 +423,7 @@ export default function Conversations() {
                 const all = [...ev, ...msg].sort((a, b) => { const ta = toMin(a.time), tb = toMin(b.time); if (ta === -1 && tb === -1) return 0; if (ta === -1) return -1; if (tb === -1) return 1; return ta - tb || (a.kind === 'event' ? -1 : 1); });
                 if (all.length === 0) return <div style={{ color: 'var(--mute)', fontSize: 14 }}>Sem atividades registradas.</div>;
                 return all.map((item, idx) => (
-                  <div key={idx} style={{ padding: 12, border: '1px solid var(--line)', borderRadius: 10, background: item.kind === 'event' ? 'rgba(255,255,255,.03)' : 'rgba(255,255,255,.02)' }}>
+                  <div key={idx} style={{ padding: 12, border: '1px solid var(--line)', borderRadius: 8, background: item.kind === 'event' ? '#FAFAF9' : '#FAFAF9' }}>
                     <div style={{ fontSize: 12, color: 'var(--mute)', marginBottom: 4 }}>
                       {item.kind === 'event'
                         ? `${item.type === 'status' ? 'Status' : item.type === 'handoff' ? 'Handoff' : item.type === 'simulation' ? 'Simulação' : item.type === 'playbook' ? 'Playbook' : item.type === 'ia' ? 'IA' : 'Evento'} · ${item.time}`
@@ -452,7 +452,7 @@ export default function Conversations() {
       </dialog>
 
       {showProposal && lead && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,12,.55)', display: 'grid', placeItems: 'center', padding: 20, zIndex: 60 }} onClick={() => setShowProposal(false)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(28,25,23,.35)', display: 'grid', placeItems: 'center', padding: 20, zIndex: 60 }} onClick={() => setShowProposal(false)}>
           <div className="card" onClick={(e) => e.stopPropagation()} style={{ width: 'min(680px, 100%)', padding: 24 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 12 }}>
               <h2 style={{ margin: 0, fontSize: 22 }}><FileText size={18} style={{ verticalAlign: 'middle' }} /> Proposta / resumo</h2>

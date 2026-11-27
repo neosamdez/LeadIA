@@ -25,8 +25,8 @@ export default function Arquitetura() {
             const Icon = s.icon;
             return (
               <div key={s.title} style={{ position: 'relative', minWidth: 0 }}>
-                <div style={{ padding: 16, border: '1px solid var(--line)', borderRadius: 14, background: 'rgba(255,255,255,.02)', height: '100%', minWidth: 0, overflow: 'hidden' }}>
-                  <div style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(255,90,82,.14)', color: '#FF8A84', display: 'grid', placeItems: 'center', marginBottom: 10 }}><Icon size={18} /></div>
+                <div style={{ padding: 16, border: '1px solid var(--line)', borderRadius: 8, background: '#FAFAF9', height: '100%', minWidth: 0, overflow: 'hidden' }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 8, background: 'var(--surf-2)', color: 'var(--mute)', display: 'grid', placeItems: 'center', marginBottom: 10 }}><Icon size={18} /></div>
                   <div style={{ fontWeight: 700, marginBottom: 6, overflowWrap: 'anywhere' }}>{s.title}</div>
                   <div style={{ fontSize: 13, color: 'var(--mute)', lineHeight: 1.45, overflowWrap: 'anywhere' }}>{s.desc}</div>
                 </div>
@@ -35,14 +35,14 @@ export default function Arquitetura() {
             );
           })}
         </div>
-        <div style={{ marginTop: 16, padding: 14, borderRadius: 12, background: 'var(--bg-alt)', fontSize: 13, color: 'var(--mute)' }}>
+        <div style={{ marginTop: 16, padding: 14, borderRadius: 8, background: 'var(--bg-alt)', fontSize: 13, color: 'var(--mute)' }}>
           <strong style={{ color: 'var(--ink)' }}>Fluxo resumido:</strong> Canal → Webhook/API oficial → Fila/Processamento → IA com contexto da empresa → CRM/Painel → Métricas e alertas → Handoff humano quando necessário.
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
         <div className="card" style={{ padding: 24 }}>
-          <h2 style={{ margin: '0 0 14px', fontSize: 20, display: 'flex', gap: 8, alignItems: 'center' }}><Shield size={18} color="#34D399" /> LGPD e conformidade</h2>
+          <h2 style={{ margin: '0 0 14px', fontSize: 20, display: 'flex', gap: 8, alignItems: 'center' }}><Shield size={18} color="#15803D" /> LGPD e conformidade</h2>
           <div style={{ display: 'grid', gap: 10 }}>
             {[
               ['Base legal e consentimento', 'Coleta e uso de dados conforme finalidade, com transparência ao titular.'],
@@ -50,7 +50,7 @@ export default function Arquitetura() {
               ['Direitos do titular', 'Suporte a acesso, correção, exclusão e portabilidade quando aplicável.'],
               ['Retenção e auditoria', 'Políticas de retenção, logs de acesso e trilha de auditoria.'],
             ].map(([t, d]) => (
-              <div key={t} style={{ padding: 12, border: '1px solid var(--line)', borderRadius: 10 }}>
+              <div key={t} style={{ padding: 12, border: '1px solid var(--line)', borderRadius: 8 }}>
                 <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 3 }}>{t}</div>
                 <div style={{ fontSize: 13, color: 'var(--mute)' }}>{d}</div>
               </div>
@@ -59,7 +59,7 @@ export default function Arquitetura() {
         </div>
 
         <div className="card" style={{ padding: 24 }}>
-          <h2 style={{ margin: '0 0 14px', fontSize: 20, display: 'flex', gap: 8, alignItems: 'center' }}><Lock size={18} color="#60A5FA" /> Segurança e limites</h2>
+          <h2 style={{ margin: '0 0 14px', fontSize: 20, display: 'flex', gap: 8, alignItems: 'center' }}><Lock size={18} color="#1D4ED8" /> Segurança e limites</h2>
           <div style={{ display: 'grid', gap: 10 }}>
             {[
               ['APIs oficiais da Meta', 'Uso de APIs oficiais, permissões e janelas de atendimento; sem promessas de acesso irrestrito.'],
@@ -67,7 +67,7 @@ export default function Arquitetura() {
               ['Proteção de dados', 'Criptografia em trânsito/repouso, segredos em vault e isolamento por tenant.'],
               ['Handoff humano', 'Casos sensíveis, baixa confiança ou alta complexidade são encaminhados para humano.'],
             ].map(([t, d]) => (
-              <div key={t} style={{ padding: 12, border: '1px solid var(--line)', borderRadius: 10 }}>
+              <div key={t} style={{ padding: 12, border: '1px solid var(--line)', borderRadius: 8 }}>
                 <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 3 }}>{t}</div>
                 <div style={{ fontSize: 13, color: 'var(--mute)' }}>{d}</div>
               </div>

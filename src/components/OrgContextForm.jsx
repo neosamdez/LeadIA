@@ -60,7 +60,7 @@ export default function OrgContextForm() {
         {stored?.updatedAt && <p style={{ ...hint, margin: '6px 0 0' }}>Última alteração em {dateTime.format(new Date(stored.updatedAt))}{author ? ` por ${author}` : ''}.</p>}
       </div>
 
-      <fieldset style={{ border: '1px solid var(--line)', borderRadius: 12, padding: 16, display: 'grid', gap: 12 }} disabled={!canEdit}>
+      <fieldset style={{ border: '1px solid var(--line)', borderRadius: 8, padding: 16, display: 'grid', gap: 12 }} disabled={!canEdit}>
         <legend style={{ display: 'flex', gap: 6, alignItems: 'center', fontWeight: 700, padding: '0 6px' }}><Target size={16} color="var(--acc)" /> Prioridade do mês</legend>
         {Object.entries(PRIORITIES).map(([id, priority]) => (
           <label key={id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14 }}>
