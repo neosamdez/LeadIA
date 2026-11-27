@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: leadia-piloto-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./deploy/whatsapp/Dockerfile
+    dockerContext: ./deploy/whatsapp
+    healthCheckPath: /healthz
+    envVars:
+      - key: WHATSAPP_ENABLED
+        value: "false"
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: AI_AUTH_URL
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: CLAUDE_MODEL
+        value: claude-haiku-5-5

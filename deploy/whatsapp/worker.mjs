@@ -74,11 +74,11 @@ export async function decide(content, { claudeKey, claudeModel, fetch: request =
   }
 }
 
-export function createRpc({ crmUrl, crmToken, fetch: request = fetch }) {
+export function createRpc({ crmUrl, crmToken, apiKey, fetch: request = fetch }) {
   return async (functionName, args = {}) => {
     const response = await request(crmUrl + '/rest/v1/rpc/' + functionName, {
       method: 'POST',
-      headers: { authorization: 'Bearer ' + crmToken, 'content-type': 'application/json' },
+      headers: { authorization: 'Bearer ' + crmToken, 'content-type': 'application/json', ...(apiKey && { apikey: apiKey }) },
       body: JSON.stringify(args),
       signal: AbortSignal.timeout(7000),
     });

@@ -22,8 +22,8 @@ function reply(response, status, body = '') {
   response.end(body);
 }
 
-export function createWebhook({ verifyToken, appSecret, phoneNumberId, recipients, rpc, ai, log = console.log }) {
-  if (!verifyToken || !appSecret || !phoneNumberId || !recipients?.size || !rpc) {
+export function createWebhook({ verifyToken, appSecret, phoneNumberId, recipients, rpc, ai, whatsappEnabled = true, log = console.log }) {
+  if (whatsappEnabled && (!verifyToken || !appSecret || !phoneNumberId || !recipients?.size || !rpc)) {
     throw new Error('WhatsApp test configuration is incomplete');
   }
 
@@ -36,7 +36,7 @@ export function createWebhook({ verifyToken, appSecret, phoneNumberId, recipient
     if (url.pathname === aiEndpoint) {
       return ai ? ai(request, response) : reply(response, 404);
     }
-    if (url.pathname !== endpoint) return reply(response, 404);
+    if (!whatsappEnabled || url.pathname !== endpoint) return reply(response, 404);
 
     if (request.method === 'GET') {
       const mode = url.searchParams.get('hub.mode');
@@ -120,6 +120,8 @@ export function createWebhook({ verifyToken, appSecret, phoneNumberId, recipient
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const config = {
+    whatsappEnabled: process.env.WHATSAPP_ENABLED !== 'false',
+    apiKey: process.env.SUPABASE_PUBLISHABLE_KEY,
     verifyToken: process.env.WHATSAPP_VERIFY_TOKEN,
     appSecret: process.env.META_APP_SECRET,
     phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
@@ -132,19 +134,21 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     claudeModel: process.env.CLAUDE_MODEL,
     authUrl: process.env.AI_AUTH_URL?.replace(/\/$/, ''),
   };
-  if (!/^v[0-9]+\.[0-9]+$/.test(config.graphVersion ?? '') || !/^[0-9]+$/.test(config.phoneNumberId ?? '')
-    || !config.crmUrl || !config.crmToken || !config.accessToken || [...config.recipients].some(value => !phone.test(value))
-    || (config.claudeKey && !/^claude-haiku-/.test(config.claudeModel ?? ''))
-    || (config.claudeKey && !/^https?:\/\//.test(config.authUrl ?? ''))) {
-    throw new Error('WhatsApp dev worker configuration is incomplete');
+  if (config.claudeKey && (!/^claude-haiku-/.test(config.claudeModel ?? '') || !/^https?:\/\//.test(config.authUrl ?? ''))) {
+    throw new Error('AI server configuration is incomplete');
   }
-  const rpc = createRpc(config);
-  const ai = createAiHandler({ authUrl: config.authUrl, claudeKey: config.claudeKey, claudeModel: config.claudeModel });
+  if (config.whatsappEnabled && (!/^v[0-9]+\.[0-9]+$/.test(config.graphVersion ?? '')
+    || !/^[0-9]+$/.test(config.phoneNumberId ?? '') || !config.crmUrl || !config.crmToken || !config.accessToken
+    || [...config.recipients].some(value => !phone.test(value)))) {
+    throw new Error('WhatsApp worker configuration is incomplete');
+  }
+  const rpc = config.whatsappEnabled ? createRpc(config) : null;
+  const ai = createAiHandler(config);
   const server = createWebhook({ ...config, rpc, ai });
   const stop = new AbortController();
   for (const signal of ['SIGTERM', 'SIGINT']) {
     process.once(signal, () => { stop.abort(); server.close(); });
   }
   server.listen(3000, '0.0.0.0');
-  await runWorker(rpc, config, stop.signal);
+  if (config.whatsappEnabled) await runWorker(rpc, config, stop.signal);
 }

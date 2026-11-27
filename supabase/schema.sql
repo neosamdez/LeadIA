@@ -2,11 +2,19 @@
 begin;
 select pg_advisory_xact_lock(74038201);
 create extension if not exists pgcrypto;
-create or replace function auth.uid() returns uuid language sql stable as $$
- select nullif(current_setting('request.jwt.claims',true)::jsonb->>'sub','')::uuid;
-$$;
-grant usage on schema auth, public to authenticated, service_role;
-grant execute on function auth.uid() to authenticated, service_role;
+-- O Supabase gerenciado já fornece auth.uid(). O banco local precisa do fallback.
+do $bootstrap$
+begin
+ if to_regprocedure('auth.uid()') is null then
+  create function auth.uid() returns uuid language sql stable as $$
+   select nullif(current_setting('request.jwt.claims',true)::jsonb->>'sub','')::uuid;
+  $$;
+  grant usage on schema auth to authenticated, service_role;
+  grant execute on function auth.uid() to authenticated, service_role;
+ end if;
+end;
+$bootstrap$;
+grant usage on schema public to authenticated, service_role;
 create or replace function public.set_updated_at() returns trigger language plpgsql as $$
 begin new.updated_at=now(); return new; end;
 $$;
