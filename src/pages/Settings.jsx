@@ -53,6 +53,12 @@ export default function Settings() {
               <input type="checkbox" checked={form.followUp} onChange={e => setForm({ ...form, followUp: e.target.checked })} style={{ width: 18, height: 18 }} />
               Follow-up inteligente ativo
             </label>
+            {user?.mode === 'real' && (
+              <label style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 14 }}>
+                <input type="checkbox" checked={!!form.useNvidiaApi} onChange={e => setForm({ ...form, useNvidiaApi: e.target.checked })} style={{ width: 18, height: 18 }} />
+                Usar IA nas conversas e na geração de agentes
+              </label>
+            )}
           </div>
 
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -85,23 +91,13 @@ export default function Settings() {
             </div>
           </div>
           <div className="card" style={{ padding: 24 }}>
-            <h2 style={{ margin: '0 0 12px', fontSize: 20 }}>Inteligência artificial</h2>
-            <p style={{ margin: '0 0 14px', fontSize: 14, color: 'var(--mute)' }}>A IA roda no servidor da LeadIA. A chave da API fica guardada no backend e nunca é salva no navegador.</p>
-            <div style={{ display: 'grid', gap: 12 }}>
-              <label style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 14 }}>
-                <input type="checkbox" checked={!!form.useNvidiaApi} onChange={e => setForm({ ...form, useNvidiaApi: e.target.checked })} style={{ width: 18, height: 18 }} />
-                Usar IA nas conversas e na geração de agentes
-              </label>
-            </div>
-          </div>
-          <div className="card" style={{ padding: 24 }}>
             <h2 style={{ margin: '0 0 8px', fontSize: 20 }}>Resetar demonstração</h2>
             <p style={{ margin: '0 0 14px', fontSize: 14, color: 'var(--mute)' }}>Restaura leads, conversas e configurações para o estado inicial.</p>
             <button className="btn btn-outline" onClick={() => { if (confirm('Resetar dados da demonstração?')) resetDemo(); }}><RotateCcw size={16} /> Resetar dados</button>
           </div>
           <div className="card" style={{ padding: 24, background: 'var(--surf-2)' }}>
             <h2 style={{ margin: '0 0 8px', fontSize: 20, color: 'var(--ink)' }}>Modo apresentação</h2>
-            <p style={{ margin: 0, fontSize: 14, color: 'var(--mute)' }}>Os dados de leads/conversas são simulados em localStorage. Com a NVIDIA API configurada, as respostas da IA nas conversas são geradas em tempo real.</p>
+            <p style={{ margin: 0, fontSize: 14, color: 'var(--mute)' }}>Os dados de leads e conversas são simulados e salvos neste navegador.</p>
           </div>
         </div>}
       </div>
