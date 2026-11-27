@@ -94,7 +94,7 @@ export default function Settings() {
               </label>
               <label style={{ display: 'grid', gap: 6, fontSize: 14, fontWeight: 600 }}>API Key
                 <input type="password" value={form.nvidiaApiKey || ''} onChange={e => setForm({ ...form, nvidiaApiKey: e.target.value })} placeholder="nvapi-..." autoComplete="off" />
-                {!form.nvidiaApiKey && import.meta.env.VITE_NVIDIA_API_KEY && <span style={{ fontSize: 12, color: '#6EE7B7', fontWeight: 400 }}>Chave detectada via .env.local (variável de ambiente).</span>}
+                {!form.nvidiaApiKey && import.meta.env.VITE_NVIDIA_API_KEY && <span style={{ fontSize: 12, color: '#15803D', fontWeight: 400 }}>Chave detectada via .env.local (variável de ambiente).</span>}
               </label>
               <label style={{ display: 'grid', gap: 6, fontSize: 14, fontWeight: 600 }}>Modelo
                 <input value={form.nvidiaModel || ''} onChange={e => setForm({ ...form, nvidiaModel: e.target.value })} placeholder="nvidia/nemotron-3.5-lightning-30b-a3b" />
@@ -111,7 +111,7 @@ export default function Settings() {
             <p style={{ margin: '0 0 14px', fontSize: 14, color: 'var(--mute)' }}>Restaura leads, conversas e configurações para o estado inicial.</p>
             <button className="btn btn-outline" onClick={() => { if (confirm('Resetar dados da demonstração?')) resetDemo(); }}><RotateCcw size={16} /> Resetar dados</button>
           </div>
-          <div className="card" style={{ padding: 24, background: 'linear-gradient(135deg, rgba(255,90,82,.18), rgba(96,165,250,.08))', borderColor: 'rgba(255,90,82,.25)' }}>
+          <div className="card" style={{ padding: 24, background: 'var(--surf-2)' }}>
             <h2 style={{ margin: '0 0 8px', fontSize: 20, color: 'var(--ink)' }}>Modo apresentação</h2>
             <p style={{ margin: 0, fontSize: 14, color: 'var(--mute)' }}>Os dados de leads/conversas são simulados em localStorage. Com a NVIDIA API configurada, as respostas da IA nas conversas são geradas em tempo real.</p>
           </div>

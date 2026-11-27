@@ -5,7 +5,7 @@ import { useApp } from '../context/AppContext';
 import RealAnalytics from './RealAnalytics';
 import AnalyticsGoals from './AnalyticsGoals';
 
-const COLORS = ['#FF5A52', '#60A5FA', '#34D399', '#FBBF24', '#A78BFA', '#F472B6'];
+const COLORS = ['#0F766E', '#1D4ED8', '#15803D', '#B45309', '#6D28D9', '#BE185D'];
 
 function Kpi({ icon: Icon, label, value, note, color }) {
   return (
@@ -13,20 +13,20 @@ function Kpi({ icon: Icon, label, value, note, color }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
         <div>
           <div style={{ color: 'var(--mute)', fontSize: 13, marginBottom: 6 }}>{label}</div>
-          <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-.03em' }}>{value}</div>
+          <div style={{ fontSize: 30, fontWeight: 650, letterSpacing: '-.03em' }}>{value}</div>
           <div style={{ color: 'var(--mute)', fontSize: 12, marginTop: 6 }}>{note}</div>
         </div>
-        <div style={{ width: 40, height: 40, borderRadius: 12, background: color.bg, color: color.fg, display: 'grid', placeItems: 'center' }}><Icon size={18} /></div>
+        <div style={{ width: 40, height: 40, borderRadius: 8, background: color.bg, color: color.fg, display: 'grid', placeItems: 'center' }}><Icon size={18} /></div>
       </div>
     </div>
   );
 }
 
 const tooltipStyle = {
-  contentStyle: { background: '#151F2B', border: '1px solid #344B63', borderRadius: 10, color: '#F1F5F9' },
-  itemStyle: { color: '#F1F5F9' },
-  labelStyle: { color: '#94A3B3' },
-  cursor: { fill: 'rgba(255,255,255,0.04)' },
+  contentStyle: { background: '#FFFFFF', border: '1px solid #D6D3D1', borderRadius: 8, color: '#1C1917' },
+  itemStyle: { color: '#1C1917' },
+  labelStyle: { color: '#57534E' },
+  cursor: { fill: '#F5F5F4' },
 };
 
 function ChartTypeSwitch({ value, onChange, options }) {
@@ -77,7 +77,7 @@ function DemoAnalytics() {
     const avgScore = Math.round(leads.reduce((a, b) => a + (b.score || 50), 0) / total);
 
     const funnel = ['Novo', 'Em atendimento', 'Qualificado', 'Proposta', 'Convertido'].map((s, i) => ({
-      etapa: s, leads: leads.filter(l => l.status === s).length, fill: COLORS[i % COLORS.length]
+      etapa: s, leads: leads.filter(l => l.status === s).length, fill: '#0F766E'
     }));
 
     const channels = ['Instagram', 'WhatsApp'].map((c) => {
@@ -89,7 +89,7 @@ function DemoAnalytics() {
     const reasonsMap = {};
     perdidos.forEach(l => { const r = l.lossReason || 'Não informado'; reasonsMap[r] = (reasonsMap[r] || 0) + 1; });
     const reasons = Object.entries(reasonsMap).map(([motivo, valor], i) => ({ motivo, valor, fill: COLORS[i % COLORS.length] }));
-    if (reasons.length === 0) reasons.push({ motivo: 'Nenhuma perda', valor: 0, fill: '#34D399' });
+    if (reasons.length === 0) reasons.push({ motivo: 'Nenhuma perda', valor: 0, fill: '#15803D' });
 
     const trend = [
       { semana: 'Sem 1', leads: Math.max(1, Math.round(total * 0.4)), convertidos: 0, receita: 0 },
@@ -111,10 +111,10 @@ function DemoAnalytics() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 16, marginBottom: 24 }}>
-        <Kpi icon={TrendingUp} label="Taxa de conversão" value={`${data.taxa}%`} note={`${data.convertidos} de ${data.total} leads`} color={{ bg: 'rgba(52,211,153,.14)', fg: '#6EE7B7' }} />
-        <Kpi icon={DollarSign} label="Receita convertida" value={`R$ ${data.receita}`} note={`R$ ${data.potencial} em aberto`} color={{ bg: 'rgba(255,90,82,.14)', fg: '#FF8A84' }} />
-        <Kpi icon={Clock} label="Tempo médio resposta" value="< 1 min" note="Simulação IA ativa" color={{ bg: 'rgba(96,165,250,.14)', fg: '#93C5FD' }} />
-        <Kpi icon={BarChart3} label="Score médio" value={data.avgScore} note="Qualidade dos leads" color={{ bg: 'rgba(251,191,36,.14)', fg: '#FCD34D' }} />
+        <Kpi icon={TrendingUp} label="Taxa de conversão" value={`${data.taxa}%`} note={`${data.convertidos} de ${data.total} leads`} color={{ bg: 'var(--surf-2)', fg: 'var(--mute)' }} />
+        <Kpi icon={DollarSign} label="Receita convertida" value={`R$ ${data.receita}`} note={`R$ ${data.potencial} em aberto`} color={{ bg: 'var(--surf-2)', fg: 'var(--mute)' }} />
+        <Kpi icon={Clock} label="Tempo médio resposta" value="< 1 min" note="Simulação IA ativa" color={{ bg: 'var(--surf-2)', fg: 'var(--mute)' }} />
+        <Kpi icon={BarChart3} label="Score médio" value={data.avgScore} note="Qualidade dos leads" color={{ bg: 'var(--surf-2)', fg: 'var(--mute)' }} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr .8fr', gap: 16, marginBottom: 16 }}>
@@ -122,9 +122,9 @@ function DemoAnalytics() {
           <ResponsiveContainer width="100%" height="100%">
             {funnelType === 'bar' ? (
               <BarChart data={data.funnel} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#243447" />
-                <XAxis dataKey="etapa" stroke="#94A3B3" fontSize={12} />
-                <YAxis stroke="#94A3B3" fontSize={12} allowDecimals={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E7E5E4" />
+                <XAxis dataKey="etapa" stroke="#57534E" fontSize={12} />
+                <YAxis stroke="#57534E" fontSize={12} allowDecimals={false} />
                 <Tooltip {...tooltipStyle} />
                 <Bar dataKey="leads" name="Leads" radius={[8, 8, 0, 0]}>
                   {data.funnel.map((e, i) => <Cell key={i} fill={e.fill} />)}
@@ -132,20 +132,20 @@ function DemoAnalytics() {
               </BarChart>
             ) : funnelType === 'area' ? (
               <AreaChart data={data.funnel} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <defs><linearGradient id="funnelG" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#FF5A52" stopOpacity={0.45} /><stop offset="95%" stopColor="#FF5A52" stopOpacity={0} /></linearGradient></defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#243447" />
-                <XAxis dataKey="etapa" stroke="#94A3B3" fontSize={12} />
-                <YAxis stroke="#94A3B3" fontSize={12} allowDecimals={false} />
+                <defs><linearGradient id="funnelG" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#0F766E" stopOpacity={0.45} /><stop offset="95%" stopColor="#0F766E" stopOpacity={0} /></linearGradient></defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E7E5E4" />
+                <XAxis dataKey="etapa" stroke="#57534E" fontSize={12} />
+                <YAxis stroke="#57534E" fontSize={12} allowDecimals={false} />
                 <Tooltip {...tooltipStyle} />
-                <Area type="monotone" dataKey="leads" name="Leads" stroke="#FF5A52" fill="url(#funnelG)" strokeWidth={3} />
+                <Area type="monotone" dataKey="leads" name="Leads" stroke="#0F766E" fill="url(#funnelG)" strokeWidth={3} />
               </AreaChart>
             ) : (
               <LineChart data={data.funnel} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#243447" />
-                <XAxis dataKey="etapa" stroke="#94A3B3" fontSize={12} />
-                <YAxis stroke="#94A3B3" fontSize={12} allowDecimals={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E7E5E4" />
+                <XAxis dataKey="etapa" stroke="#57534E" fontSize={12} />
+                <YAxis stroke="#57534E" fontSize={12} allowDecimals={false} />
                 <Tooltip {...tooltipStyle} />
-                <Line type="monotone" dataKey="leads" name="Leads" stroke="#FF5A52" strokeWidth={3} dot={{ r: 5 }} activeDot={{ r: 7 }} />
+                <Line type="monotone" dataKey="leads" name="Leads" stroke="#0F766E" strokeWidth={3} dot={{ r: 5 }} activeDot={{ r: 7 }} />
               </LineChart>
             )}
           </ResponsiveContainer>
@@ -163,13 +163,13 @@ function DemoAnalytics() {
               </PieChart>
             ) : (
               <BarChart data={data.channels} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#243447" />
-                <XAxis dataKey="canal" stroke="#94A3B3" fontSize={12} />
-                <YAxis stroke="#94A3B3" fontSize={12} allowDecimals={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E7E5E4" />
+                <XAxis dataKey="canal" stroke="#57534E" fontSize={12} />
+                <YAxis stroke="#57534E" fontSize={12} allowDecimals={false} />
                 <Tooltip {...tooltipStyle} />
                 <Legend />
-                <Bar dataKey="leads" name="Leads" fill="#60A5FA" radius={[8,8,0,0]} />
-                <Bar dataKey="convertidos" name="Convertidos" fill="#34D399" radius={[8,8,0,0]} />
+                <Bar dataKey="leads" name="Leads" fill="#1D4ED8" radius={[3,3,0,0]} />
+                <Bar dataKey="convertidos" name="Convertidos" fill="#15803D" radius={[3,3,0,0]} />
               </BarChart>
             )}
           </ResponsiveContainer>
@@ -181,11 +181,11 @@ function DemoAnalytics() {
           <ResponsiveContainer width="100%" height="100%">
             {lossType === 'bar' ? (
               <BarChart data={data.reasons} layout="vertical" margin={{ top: 10, right: 20, left: 20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#243447" />
-                <XAxis type="number" stroke="#94A3B3" fontSize={12} allowDecimals={false} />
-                <YAxis type="category" dataKey="motivo" stroke="#94A3B3" fontSize={12} width={120} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E7E5E4" />
+                <XAxis type="number" stroke="#57534E" fontSize={12} allowDecimals={false} />
+                <YAxis type="category" dataKey="motivo" stroke="#57534E" fontSize={12} width={120} />
                 <Tooltip {...tooltipStyle} />
-                <Bar dataKey="valor" name="Casos" fill="#FBBF24" radius={[0,8,8,0]} />
+                <Bar dataKey="valor" name="Casos" fill="#B45309" radius={[0,3,3,0]} />
               </BarChart>
             ) : (
               <PieChart>
@@ -203,37 +203,37 @@ function DemoAnalytics() {
           <ResponsiveContainer width="100%" height="100%">
             {trendType === 'bar' ? (
               <BarChart data={data.trend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#243447" />
-                <XAxis dataKey="semana" stroke="#94A3B3" fontSize={12} />
-                <YAxis stroke="#94A3B3" fontSize={12} allowDecimals={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E7E5E4" />
+                <XAxis dataKey="semana" stroke="#57534E" fontSize={12} />
+                <YAxis stroke="#57534E" fontSize={12} allowDecimals={false} />
                 <Tooltip {...tooltipStyle} />
                 <Legend />
-                <Bar dataKey="leads" name="Leads" fill="#60A5FA" radius={[8,8,0,0]} />
-                <Bar dataKey="convertidos" name="Convertidos" fill="#34D399" radius={[8,8,0,0]} />
+                <Bar dataKey="leads" name="Leads" fill="#1D4ED8" radius={[3,3,0,0]} />
+                <Bar dataKey="convertidos" name="Convertidos" fill="#15803D" radius={[3,3,0,0]} />
               </BarChart>
             ) : trendType === 'line' ? (
               <LineChart data={data.trend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#243447" />
-                <XAxis dataKey="semana" stroke="#94A3B3" fontSize={12} />
-                <YAxis stroke="#94A3B3" fontSize={12} allowDecimals={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E7E5E4" />
+                <XAxis dataKey="semana" stroke="#57534E" fontSize={12} />
+                <YAxis stroke="#57534E" fontSize={12} allowDecimals={false} />
                 <Tooltip {...tooltipStyle} />
                 <Legend />
-                <Line type="monotone" dataKey="leads" name="Leads" stroke="#60A5FA" strokeWidth={3} dot={{ r: 4 }} />
-                <Line type="monotone" dataKey="convertidos" name="Convertidos" stroke="#34D399" strokeWidth={3} dot={{ r: 4 }} />
+                <Line type="monotone" dataKey="leads" name="Leads" stroke="#1D4ED8" strokeWidth={3} dot={{ r: 4 }} />
+                <Line type="monotone" dataKey="convertidos" name="Convertidos" stroke="#15803D" strokeWidth={3} dot={{ r: 4 }} />
               </LineChart>
             ) : (
               <AreaChart data={data.trend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="gLeads" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#60A5FA" stopOpacity={0.35} /><stop offset="95%" stopColor="#60A5FA" stopOpacity={0} /></linearGradient>
-                  <linearGradient id="gConv" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#34D399" stopOpacity={0.35} /><stop offset="95%" stopColor="#34D399" stopOpacity={0} /></linearGradient>
+                  <linearGradient id="gLeads" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#1D4ED8" stopOpacity={0.35} /><stop offset="95%" stopColor="#1D4ED8" stopOpacity={0} /></linearGradient>
+                  <linearGradient id="gConv" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#15803D" stopOpacity={0.35} /><stop offset="95%" stopColor="#15803D" stopOpacity={0} /></linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#243447" />
-                <XAxis dataKey="semana" stroke="#94A3B3" fontSize={12} />
-                <YAxis stroke="#94A3B3" fontSize={12} allowDecimals={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E7E5E4" />
+                <XAxis dataKey="semana" stroke="#57534E" fontSize={12} />
+                <YAxis stroke="#57534E" fontSize={12} allowDecimals={false} />
                 <Tooltip {...tooltipStyle} />
                 <Legend />
-                <Area type="monotone" dataKey="leads" name="Leads" stroke="#60A5FA" fill="url(#gLeads)" strokeWidth={3} />
-                <Area type="monotone" dataKey="convertidos" name="Convertidos" stroke="#34D399" fill="url(#gConv)" strokeWidth={3} />
+                <Area type="monotone" dataKey="leads" name="Leads" stroke="#1D4ED8" fill="url(#gLeads)" strokeWidth={3} />
+                <Area type="monotone" dataKey="convertidos" name="Convertidos" stroke="#15803D" fill="url(#gConv)" strokeWidth={3} />
               </AreaChart>
             )}
           </ResponsiveContainer>
@@ -251,11 +251,11 @@ function DemoAnalytics() {
             const pct = m.invert ? (m.actual <= m.goal ? 100 : Math.round((m.goal / Math.max(m.actual,1)) * 100)) : Math.min(100, Math.round((m.actual / Math.max(m.goal,1)) * 100));
             const ok = m.invert ? m.actual <= m.goal : m.actual >= m.goal;
             return (
-              <div key={m.label} style={{ padding: 14, border: '1px solid var(--line)', borderRadius: 12 }}>
+              <div key={m.label} style={{ padding: 14, border: '1px solid var(--line)', borderRadius: 8 }}>
                 <div style={{ fontSize: 12, color: 'var(--mute)' }}>{m.label}</div>
-                <div style={{ fontSize: 20, fontWeight: 800, color: ok ? '#6EE7B7' : '#FCD34D' }}>{m.fmt(m.actual)}</div>
+                <div style={{ fontSize: 20, fontWeight: 650, color: ok ? '#15803D' : '#B45309' }}>{m.fmt(m.actual)}</div>
                 <div style={{ fontSize: 12, color: 'var(--mute)', marginBottom: 8 }}>Meta: {m.fmt(m.goal)}</div>
-                <div style={{ height: 8, background: 'var(--surf-2)', borderRadius: 99, overflow: 'hidden' }}><div style={{ width: `${pct}%`, height: '100%', background: ok ? '#34D399' : '#FBBF24' }} /></div>
+                <div style={{ height: 8, background: 'var(--surf-2)', borderRadius: 99, overflow: 'hidden' }}><div style={{ width: `${pct}%`, height: '100%', background: ok ? '#15803D' : '#B45309' }} /></div>
               </div>
             );
           })}
@@ -271,7 +271,7 @@ function DemoAnalytics() {
             'Leads em “Proposta” há mais de 24h devem entrar em sequência de follow-up.',
             'Registrar motivo de perda ajuda a treinar o script comercial e melhorar conversão.',
           ].map((t, i) => (
-            <div key={i} style={{ padding: 12, border: '1px solid var(--line)', borderRadius: 10, fontSize: 14, color: 'var(--mute)', background: 'rgba(255,255,255,.02)' }}>{t}</div>
+            <div key={i} style={{ padding: 12, border: '1px solid var(--line)', borderRadius: 8, fontSize: 14, color: 'var(--mute)', background: '#FAFAF9' }}>{t}</div>
           ))}
         </div>
       </div>
