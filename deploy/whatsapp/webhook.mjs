@@ -2,8 +2,10 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { createServer } from 'node:http';
 import { pathToFileURL } from 'node:url';
 import { createRpc, runWorker } from './worker.mjs';
+import { createAiHandler } from './ai.mjs';
 
 const endpoint = '/webhooks/whatsapp';
+const aiEndpoint = '/ai/v1/complete';
 const maxBodyBytes = 1024 * 1024;
 const phone = /^[1-9][0-9]{6,14}$/;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -20,7 +22,7 @@ function reply(response, status, body = '') {
   response.end(body);
 }
 
-export function createWebhook({ verifyToken, appSecret, phoneNumberId, recipients, rpc, log = console.log }) {
+export function createWebhook({ verifyToken, appSecret, phoneNumberId, recipients, rpc, ai, log = console.log }) {
   if (!verifyToken || !appSecret || !phoneNumberId || !recipients?.size || !rpc) {
     throw new Error('WhatsApp test configuration is incomplete');
   }
@@ -30,6 +32,9 @@ export function createWebhook({ verifyToken, appSecret, phoneNumberId, recipient
     const url = new URL('http://localhost' + request.url);
     if (url.pathname === '/healthz' && request.method === 'GET') {
       return reply(response, 200, 'ok');
+    }
+    if (url.pathname === aiEndpoint) {
+      return ai ? ai(request, response) : reply(response, 404);
     }
     if (url.pathname !== endpoint) return reply(response, 404);
 
@@ -125,14 +130,17 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     crmToken: process.env.WHATSAPP_CRM_TOKEN,
     claudeKey: process.env.ANTHROPIC_API_KEY,
     claudeModel: process.env.CLAUDE_MODEL,
+    authUrl: process.env.AI_AUTH_URL?.replace(/\/$/, ''),
   };
   if (!/^v[0-9]+\.[0-9]+$/.test(config.graphVersion ?? '') || !/^[0-9]+$/.test(config.phoneNumberId ?? '')
     || !config.crmUrl || !config.crmToken || !config.accessToken || [...config.recipients].some(value => !phone.test(value))
-    || (config.claudeKey && !/^claude-haiku-/.test(config.claudeModel ?? ''))) {
+    || (config.claudeKey && !/^claude-haiku-/.test(config.claudeModel ?? ''))
+    || (config.claudeKey && !/^https?:\/\//.test(config.authUrl ?? ''))) {
     throw new Error('WhatsApp dev worker configuration is incomplete');
   }
   const rpc = createRpc(config);
-  const server = createWebhook({ ...config, rpc });
+  const ai = createAiHandler({ authUrl: config.authUrl, claudeKey: config.claudeKey, claudeModel: config.claudeModel });
+  const server = createWebhook({ ...config, rpc, ai });
   const stop = new AbortController();
   for (const signal of ['SIGTERM', 'SIGINT']) {
     process.once(signal, () => { stop.abort(); server.close(); });

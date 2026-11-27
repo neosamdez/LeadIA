@@ -15,7 +15,7 @@ import { appLeadToDb, dbLeadToApp, dbMessageToApp, dbFollowUpToApp, appFollowUpT
 const empty = {
   members: [], leads: [], conversations: {}, leadEvents: {}, followUps: [], dismissedAlerts: [],
   goals: { monthlyLeads: 0, conversionRate: 0, revenue: 0, responseMinutes: 0 },
-  settings: { companyName: '', segment: '', tone: '', autoReply: false, followUp: true, useNvidiaApi: false, nvidiaApiKey: '', context: null },
+  settings: { companyName: '', segment: '', tone: '', autoReply: false, followUp: true, useNvidiaApi: false, context: null },
   tour: { active: false, step: 0 }, activePersonaId: null, agent: null, adIntegrations: null,
 };
 const noDemoAction = () => {};
