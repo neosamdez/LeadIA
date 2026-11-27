@@ -22,7 +22,7 @@ function AlertCard({ icon: Icon, color, title, desc, action, onAction, onDismiss
 }
 
 export default function Alertas() {
-  const { leads, dismissedAlerts, dismissAlert, clearDismissedAlerts, addFollowUp, followUps, completeFollowUp } = useApp();
+  const { user, leads, dismissedAlerts, dismissAlert, clearDismissedAlerts, addFollowUp, followUps, completeFollowUp } = useApp();
   const navigate = useNavigate();
   const [showDone, setShowDone] = useState(false);
   const [period, setPeriod] = useState('all');
@@ -75,7 +75,7 @@ export default function Alertas() {
       <div className="page-head">
         <div>
           <h1>Central de Alertas</h1>
-          <p>Ações prioritárias geradas pela IA para não perder oportunidades comerciais.</p>
+          <p>{user?.mode === 'real' ? 'Sinais calculados por regras fixas sobre status, pontuação e última mensagem dos leads.' : 'Ações prioritárias geradas pela IA para não perder oportunidades comerciais.'}</p>
         </div>
         {dismissedAlerts.length > 0 && <button className="btn btn-outline btn-sm" onClick={clearDismissedAlerts}>Restaurar dispensados ({dismissedAlerts.length})</button>}
       </div>

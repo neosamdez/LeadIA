@@ -9,6 +9,7 @@ import Conversations from './pages/Conversations';
 import Analytics from './pages/Analytics';
 import Kanban from './pages/Kanban';
 import Alertas from './pages/Alertas';
+import Hoje from './pages/Hoje';
 import Arquitetura from './pages/Arquitetura';
 import Settings from './pages/Settings';
 import { DataDeletion, PrivacyPolicy } from './pages/Privacy';
@@ -32,7 +33,7 @@ function PublicOnly({ children }) {
   if (authReady === false) return <p role="status">Restaurando sessão...</p>;
   if (user) {
     const returnTo = state?.returnTo;
-    const destination = typeof returnTo === 'string' && /^\/app(?:[/?#]|$)/.test(returnTo) ? returnTo : '/app';
+    const destination = typeof returnTo === 'string' && /^\/app(?:[/?#]|$)/.test(returnTo) ? returnTo : '/app/hoje';
     return <Navigate to={destination} replace />;
   }
   return children;
@@ -54,6 +55,7 @@ export default function App() {
             <Route path="conversas/:leadId" element={<Conversations />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="pipeline" element={<Kanban />} />
+            <Route path="hoje" element={<Hoje />} />
             <Route path="alertas" element={<Alertas />} />
             <Route path="arquitetura" element={<Arquitetura />} />
             <Route path="configuracoes" element={<Settings />} />
