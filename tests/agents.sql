@@ -95,3 +95,13 @@ reset role;
 select pg_temp.assert_agent((select count(*) = 0 from public.agent_revisions where agent_id = :'agent_a'),'revisões apagadas com o agente');
 
 rollback;
+do $$
+begin
+ if has_function_privilege('anon', 'public.publish_agent(uuid)', 'EXECUTE')
+    or has_function_privilege('anon', 'public.get_or_create_org()', 'EXECUTE')
+    or has_function_privilege('authenticated', 'public.insert_agent_revision(public.agents,jsonb,uuid)', 'EXECUTE')
+    or not has_function_privilege('authenticated', 'public.publish_agent(uuid)', 'EXECUTE') then
+  raise exception 'Permissões de execução das funções do agente estão incorretas';
+ end if;
+end;
+$$;

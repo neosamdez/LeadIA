@@ -17,7 +17,7 @@ language sql stable security invoker set search_path = '' as $$
   where team.org_id = p_org_id and public.is_org_member(p_org_id)
   order by team.created_at, team.user_id;
 $$;
-revoke all on function public.list_lead_assignees(uuid) from public;
+revoke all on function public.list_lead_assignees(uuid) from public,anon;
 grant execute on function public.list_lead_assignees(uuid) to authenticated;
 
 create index if not exists leads_org_owner_idx on public.leads(org_id,owner_id)
@@ -62,7 +62,7 @@ begin
 end;
 $$;
 
-revoke all on function public.validate_lead_owner(), public.audit_lead_owner() from public;
+revoke all on function public.validate_lead_owner(), public.audit_lead_owner() from public,anon,authenticated;
 
 drop trigger if exists lead_owner_validate on public.leads;
 create trigger lead_owner_validate before insert or update of owner_id on public.leads

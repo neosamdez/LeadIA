@@ -76,7 +76,7 @@ begin
   return new;
 end;
 $$;
-revoke all on function public.stamp_agent() from public;
+revoke all on function public.stamp_agent() from public,anon,authenticated;
 drop trigger if exists agents_stamp on public.agents;
 create trigger agents_stamp before insert or update on public.agents
 for each row execute function public.stamp_agent();
@@ -91,7 +91,7 @@ language sql stable set search_path = '' as $$
     'context_updated_at', s.context_updated_at)
   from public.org_settings s where s.org_id = p_org;
 $$;
-revoke all on function public.agent_context_snapshot(uuid) from public;
+revoke all on function public.agent_context_snapshot(uuid) from public,anon,authenticated;
 
 -- Grava uma revisão nova a partir de uma configuração e a torna a publicada.
 create or replace function public.insert_agent_revision(p_agent public.agents, p_config jsonb, p_restored uuid)
@@ -115,7 +115,7 @@ begin
   return rev;
 end;
 $$;
-revoke all on function public.insert_agent_revision(public.agents, jsonb, uuid) from public;
+revoke all on function public.insert_agent_revision(public.agents, jsonb, uuid) from public,anon,authenticated;
 
 create or replace function public.publish_agent(p_agent_id uuid) returns public.agent_revisions
 language plpgsql security definer set search_path = '' as $$
@@ -142,7 +142,7 @@ begin
   return public.insert_agent_revision(agent, old_rev.config, old_rev.id);
 end;
 $$;
-revoke all on function public.publish_agent(uuid), public.restore_agent_revision(uuid) from public;
+revoke all on function public.publish_agent(uuid), public.restore_agent_revision(uuid) from public,anon;
 grant execute on function public.publish_agent(uuid), public.restore_agent_revision(uuid) to authenticated;
 
 alter table public.agents enable row level security;
@@ -175,7 +175,7 @@ begin
   raise exception 'Revisões publicadas são imutáveis.' using errcode = '42501';
 end;
 $$;
-revoke all on function public.prevent_revision_change() from public;
+revoke all on function public.prevent_revision_change() from public,anon,authenticated;
 drop trigger if exists agent_revisions_immutable on public.agent_revisions;
 create trigger agent_revisions_immutable before update or delete on public.agent_revisions
 for each row execute function public.prevent_revision_change();
