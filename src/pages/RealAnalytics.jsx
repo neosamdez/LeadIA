@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ANALYTICS_TIME_ZONE, analyticsPeriod, analyticsStart } from '../lib/analyticsPeriod';
 import { PAGE_SIZE, readAnalyticsPage } from '../services/analytics';
 import AnalyticsGoals from './AnalyticsGoals';
 import './RealAnalytics.css';
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-const timeZone = 'America/Sao_Paulo';
-const dateLabel = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone });
+const dateLabel = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: ANALYTICS_TIME_ZONE });
 
 function Metric({ orgId, metric, label, description, start, cutoff }) {
   const [page, setPage] = useState(0);
@@ -72,10 +71,11 @@ function Metric({ orgId, metric, label, description, start, cutoff }) {
 }
 
 export default function RealAnalytics({ orgId }) {
-  const [days, setDays] = useState(7);
+  const [params, setParams] = useSearchParams();
+  const period = analyticsPeriod(params.get('periodo'));
   const [now, setNow] = useState(Date.now);
   const cutoff = new Date(now).toISOString();
-  const start = new Date(now - days * DAY_MS).toISOString();
+  const start = analyticsStart(period, now);
 
   return (
     <div className="real-analytics">
@@ -84,9 +84,14 @@ export default function RealAnalytics({ orgId }) {
       </header>
       <div className="real-analytics-controls">
         <label htmlFor="analytics-period">Período dos novos leads</label>
-        <select id="analytics-period" value={days} onChange={event => setDays(Number(event.target.value))}>
-          <option value={7}>Últimos 7 dias</option>
-          <option value={30}>Últimos 30 dias</option>
+        <select id="analytics-period" value={period} onChange={event => {
+          const next = new URLSearchParams(params);
+          next.set('periodo', event.target.value);
+          setParams(next);
+        }}>
+          <option value="7d">Últimos 7 dias</option>
+          <option value="30d">Últimos 30 dias</option>
+          <option value="mes">Mês corrente</option>
         </select>
         <button className="btn btn-outline btn-sm" onClick={() => setNow(Date.now())}>Atualizar</button>
       </div>

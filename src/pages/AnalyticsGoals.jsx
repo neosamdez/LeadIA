@@ -10,9 +10,10 @@ const fields = [
 ];
 
 export default function AnalyticsGoals({ children }) {
-  const { goals, updateGoals } = useApp();
+  const { goals, updateGoals, user, members } = useApp();
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
+  const viewer = members?.some(member => member.id === user?.id && member.role === 'viewer');
 
   async function save(event) {
     event.preventDefault();
@@ -29,10 +30,10 @@ export default function AnalyticsGoals({ children }) {
     <div className="card" style={{ padding: 22, marginTop: 16, marginBottom: 16 }}>
       <div className="real-analytics-controls" style={{ justifyContent: 'space-between' }}>
         <h2 style={{ margin: 0, fontSize: 20 }}>Metas mensais</h2>
-        <button className="btn btn-sm btn-outline" disabled={saving}
-          onClick={() => setForm(form ? null : { ...goals })}>{form ? 'Fechar' : 'Editar metas'}</button>
+        {!viewer && <button className="btn btn-sm btn-outline" disabled={saving}
+          onClick={() => setForm(form ? null : { ...goals })}>{form ? 'Fechar' : 'Editar metas'}</button>}
       </div>
-      {form && (
+      {!viewer && form && (
         <form onSubmit={save} className="real-analytics-grid" style={{ marginTop: 12, marginBottom: 14 }}>
           {fields.map(([key, label]) => (
             <label key={key} style={{ display: 'grid', gap: 4 }}>
