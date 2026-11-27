@@ -85,25 +85,13 @@ export default function Settings() {
             </div>
           </div>
           <div className="card" style={{ padding: 24 }}>
-            <h2 style={{ margin: '0 0 12px', fontSize: 20 }}>Integração NVIDIA API</h2>
-            <p style={{ margin: '0 0 14px', fontSize: 14, color: 'var(--mute)' }}>Use a API da NVIDIA NIM para gerar respostas reais da IA nas conversas. A chave fica salva apenas no seu navegador (localStorage).</p>
+            <h2 style={{ margin: '0 0 12px', fontSize: 20 }}>Inteligência artificial</h2>
+            <p style={{ margin: '0 0 14px', fontSize: 14, color: 'var(--mute)' }}>A IA roda no servidor da LeadIA. A chave da API fica guardada no backend e nunca é salva no navegador.</p>
             <div style={{ display: 'grid', gap: 12 }}>
               <label style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 14 }}>
                 <input type="checkbox" checked={!!form.useNvidiaApi} onChange={e => setForm({ ...form, useNvidiaApi: e.target.checked })} style={{ width: 18, height: 18 }} />
-                Usar NVIDIA API nas conversas
+                Usar IA nas conversas e na geração de agentes
               </label>
-              <label style={{ display: 'grid', gap: 6, fontSize: 14, fontWeight: 600 }}>API Key
-                <input type="password" value={form.nvidiaApiKey || ''} onChange={e => setForm({ ...form, nvidiaApiKey: e.target.value })} placeholder="nvapi-..." autoComplete="off" />
-                {!form.nvidiaApiKey && import.meta.env.VITE_NVIDIA_API_KEY && <span style={{ fontSize: 12, color: '#15803D', fontWeight: 400 }}>Chave detectada via .env.local (variável de ambiente).</span>}
-              </label>
-              <label style={{ display: 'grid', gap: 6, fontSize: 14, fontWeight: 600 }}>Modelo
-                <input value={form.nvidiaModel || ''} onChange={e => setForm({ ...form, nvidiaModel: e.target.value })} placeholder="nvidia/nemotron-3.5-lightning-30b-a3b" />
-              </label>
-              <label style={{ display: 'grid', gap: 6, fontSize: 14, fontWeight: 600 }}>Proxy URL (opcional)
-                <input value={form.nvidiaProxyUrl || ''} onChange={e => setForm({ ...form, nvidiaProxyUrl: e.target.value })} placeholder="https://seu-proxy.com/v1/chat/completions" />
-                <span style={{ fontSize: 12, color: 'var(--mute)', fontWeight: 400 }}>Use um proxy para evitar CORS no browser (recomendado para GitHub Pages).</span>
-              </label>
-              <div style={{ fontSize: 12, color: 'var(--mute)' }}>Endpoint direto: <code style={{ color: 'var(--ink)' }}>https://integrate.api.nvidia.com/v1/chat/completions</code></div>
             </div>
           </div>
           <div className="card" style={{ padding: 24 }}>

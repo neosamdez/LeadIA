@@ -74,7 +74,6 @@ const defaultState = {
     tone: 'Profissional e amigável',
     autoReply: true,
     followUp: true,
-    nvidiaApiKey: '',
     nvidiaModel: import.meta.env.VITE_NVIDIA_MODEL || 'nvidia/nemotron-3.5-lightning-30b-a3b',
     nvidiaProxyUrl: import.meta.env.VITE_NVIDIA_PROXY_URL || '',
     useNvidiaApi: true,
@@ -215,7 +214,7 @@ function DemoAppProvider({ children }) {
       if (s.user?.mode === 'real') return s;
       const p = personas.find(x => x.id === personaId);
       if (!p) return s;
-      const keep = { nvidiaApiKey: s.settings.nvidiaApiKey, nvidiaModel: s.settings.nvidiaModel, nvidiaProxyUrl: s.settings.nvidiaProxyUrl, useNvidiaApi: s.settings.useNvidiaApi };
+      const keep = { nvidiaModel: s.settings.nvidiaModel, nvidiaProxyUrl: s.settings.nvidiaProxyUrl, useNvidiaApi: s.settings.useNvidiaApi };
       return {
         ...s,
         leads: p.leads,
@@ -232,7 +231,7 @@ function DemoAppProvider({ children }) {
       return {
         ...defaultState,
         user: s.user,
-        settings: { ...defaultState.settings, nvidiaApiKey: s.settings.nvidiaApiKey, nvidiaModel: s.settings.nvidiaModel, nvidiaProxyUrl: s.settings.nvidiaProxyUrl, useNvidiaApi: s.settings.useNvidiaApi },
+        settings: { ...defaultState.settings, nvidiaModel: s.settings.nvidiaModel, nvidiaProxyUrl: s.settings.nvidiaProxyUrl, useNvidiaApi: s.settings.useNvidiaApi },
       };
     }),
     startTour: () => setState((s) => ({ ...s, tour: { active: true, step: 0 } })),

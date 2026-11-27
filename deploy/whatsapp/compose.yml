@@ -15,7 +15,10 @@ services:
       WHATSAPP_CRM_TOKEN: ${WHATSAPP_CRM_TOKEN:?required}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       CLAUDE_MODEL: ${CLAUDE_MODEL:-}
-    networks: [dokploy-network]
+      AI_AUTH_URL: http://leadia-dev-backend:8000/auth/v1
+    networks:
+      dokploy-network:
+        aliases: [leadia-whatsapp-dev]
     mem_limit: 128m
     cpus: 0.25
 
