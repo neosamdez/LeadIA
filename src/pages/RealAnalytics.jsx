@@ -102,7 +102,7 @@ export default function RealAnalytics({ orgId }) {
         <Metric key={orgId + start + cutoff} orgId={orgId} metric="new-leads" label="Novos leads"
           description="Leads cadastrados no período selecionado." start={start} cutoff={cutoff} />
         <Metric key={orgId + cutoff} orgId={orgId} metric="overdue" label="Retornos em atraso"
-          description="Retornos abertos com prazo anterior ao horário da consulta." cutoff={cutoff} />
+          description="Retornos abertos cujo prazo registrado no CRM já passou. Retornos sem prazo registrado ficam fora do total." cutoff={cutoff} />
       </div>
       <AnalyticsGoals />
     </div>

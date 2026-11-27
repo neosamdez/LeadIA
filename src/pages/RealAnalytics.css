@@ -58,3 +58,18 @@
   outline: 2px solid var(--blue);
   outline-offset: 3px;
 }
+
+.real-analytics-goals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  gap: 12px;
+}
+
+.real-analytics-goals dt {
+  color: var(--mute);
+}
+
+.real-analytics-goals dd {
+  margin: 2px 0 0;
+  font-weight: 700;
+}

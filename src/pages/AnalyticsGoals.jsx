@@ -3,11 +3,20 @@ import { Save } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 const fields = [
-  ['monthlyLeads', 'Meta leads/mês'],
-  ['conversionRate', 'Meta conversão (%)'],
-  ['revenue', 'Meta receita (R$)'],
-  ['responseMinutes', 'Meta resposta (min)'],
+  ['monthlyLeads', 'Leads', 'Meta leads/mês', 1],
+  ['conversionRate', 'Conversão', 'Meta conversão (%)', 0.01, 999.99],
+  ['revenue', 'Receita', 'Meta receita (R$)', 0.01],
+  ['responseMinutes', 'Tempo de resposta', 'Meta resposta (min)', 1],
 ];
+
+const number = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 });
+const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+const formatGoal = {
+  monthlyLeads: value => number.format(value),
+  conversionRate: value => number.format(value) + '%',
+  revenue: value => currency.format(value),
+  responseMinutes: value => number.format(value) + ' min',
+};
 
 export default function AnalyticsGoals({ children }) {
   const { goals, updateGoals, user, members } = useApp();
@@ -33,12 +42,19 @@ export default function AnalyticsGoals({ children }) {
         {!viewer && <button className="btn btn-sm btn-outline" disabled={saving}
           onClick={() => setForm(form ? null : { ...goals })}>{form ? 'Fechar' : 'Editar metas'}</button>}
       </div>
+      {user?.mode === 'real' && (
+        <dl className="real-analytics-goals" aria-label="Metas configuradas">
+          {fields.map(([key, label]) => (
+            <div key={key}><dt>{label}</dt><dd>{formatGoal[key](goals[key])}</dd></div>
+          ))}
+        </dl>
+      )}
       {!viewer && form && (
         <form onSubmit={save} className="real-analytics-grid" style={{ marginTop: 12, marginBottom: 14 }}>
-          {fields.map(([key, label]) => (
+          {fields.map(([key, , label, step, max]) => (
             <label key={key} style={{ display: 'grid', gap: 4 }}>
               {label}
-              <input type="number" min="0" step={key === 'revenue' ? '0.01' : '1'} value={form[key]}
+              <input type="number" min="0" step={step} max={max} required value={form[key]}
                 onChange={event => setForm({ ...form, [key]: event.target.value })} />
             </label>
           ))}
