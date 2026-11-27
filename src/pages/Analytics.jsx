@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
-import { BarChart3, TrendingUp, Clock, DollarSign, MessageSquare, AlertCircle, Activity, Target, Save } from 'lucide-react';
+import { BarChart3, TrendingUp, Clock, DollarSign, MessageSquare, AlertCircle, Activity } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { useApp } from '../context/AppContext';
+import RealAnalytics from './RealAnalytics';
+import AnalyticsGoals from './AnalyticsGoals';
 
 const COLORS = ['#FF5A52', '#60A5FA', '#34D399', '#FBBF24', '#A78BFA', '#F472B6'];
 
@@ -53,12 +55,16 @@ function ChartCard({ title, icon: Icon, type, setType, options, children, note }
 }
 
 export default function Analytics() {
-  const { leads, goals, updateGoals } = useApp();
+  const { user, orgId } = useApp();
+  return user?.mode === 'real' ? <RealAnalytics key={orgId} orgId={orgId} /> : <DemoAnalytics />;
+}
+
+function DemoAnalytics() {
+  const { leads, goals } = useApp();
   const [funnelType, setFunnelType] = useState('bar');
   const [channelType, setChannelType] = useState('pie');
   const [lossType, setLossType] = useState('bar');
   const [trendType, setTrendType] = useState('area');
-  const [goalForm, setGoalForm] = useState(null);
 
   const data = useMemo(() => {
     const total = leads.length || 1;
@@ -100,7 +106,7 @@ export default function Analytics() {
       <div className="page-head">
         <div>
           <h1>Analytics</h1>
-          <p>Inteligência comercial com gráficos interativos para apresentar resultados e oportunidades.</p>
+          <p>Demonstração · Os indicadores e gráficos usam dados de exemplo.</p>
         </div>
       </div>
 
@@ -234,19 +240,7 @@ export default function Analytics() {
         </ChartCard>
       </div>
 
-      <div className="card" style={{ padding: 22, marginBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 14 }}>
-          <h2 style={{ margin: 0, fontSize: 20, display: 'flex', gap: 8, alignItems: 'center' }}><Target size={18} color="var(--acc)" /> Metas vs resultado</h2>
-          <button className="btn btn-sm btn-outline" onClick={() => setGoalForm(goalForm ? null : { ...goals })}>{goalForm ? 'Fechar' : 'Editar metas'}</button>
-        </div>
-        {goalForm && (
-          <form onSubmit={(e) => { e.preventDefault(); updateGoals({ monthlyLeads: Number(goalForm.monthlyLeads)||0, conversionRate: Number(goalForm.conversionRate)||0, revenue: Number(goalForm.revenue)||0, responseMinutes: Number(goalForm.responseMinutes)||0 }); setGoalForm(null); }} style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 10, marginBottom: 14 }}>
-            {[['monthlyLeads','Meta leads/mês'],['conversionRate','Meta conversão (%)'],['revenue','Meta receita (R$)'],['responseMinutes','Meta resposta (min)']].map(([k,label]) => (
-              <label key={k} style={{ display: 'grid', gap: 4, fontSize: 12, color: 'var(--mute)' }}>{label}<input type="number" value={goalForm[k]} onChange={e => setGoalForm({ ...goalForm, [k]: e.target.value })} /></label>
-            ))}
-            <div style={{ gridColumn: '1 / -1' }}><button className="btn btn-primary btn-sm" type="submit"><Save size={14} /> Salvar metas</button></div>
-          </form>
-        )}
+      <AnalyticsGoals>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 12 }}>
           {[
             { label: 'Leads', actual: data.total, goal: goals.monthlyLeads, fmt: v => v },
@@ -266,7 +260,7 @@ export default function Analytics() {
             );
           })}
         </div>
-      </div>
+      </AnalyticsGoals>
 
       <div className="card" style={{ padding: 22 }}>
         <h2 style={{ margin: '0 0 16px', fontSize: 20 }}>Recomendações da IA</h2>
