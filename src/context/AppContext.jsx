@@ -80,6 +80,7 @@ const defaultState = {
     useNvidiaApi: true,
   },
   tour: { active: false, step: 0 },
+  adIntegrations: [],
   agent: { id: 'demo-agent', kind: 'atendimento', name: 'Atendimento', draft: EMPTY_AGENT, publishedRevisionId: null, revisions: [] },
 };
 
@@ -178,6 +179,21 @@ function DemoAppProvider({ children }) {
     },
     updateContext: (patch) => {
       setState((s) => ({ ...s, settings: { ...s.settings, context: { ...EMPTY_CONTEXT, ...s.settings.context, ...patch, updatedAt: new Date().toISOString(), updatedBy: s.user?.id || '' } } }));
+      return true;
+    },
+    addAdIntegration: (item) => {
+      if (state.adIntegrations.some((i) => i.provider === item.provider && i.externalId === item.externalId)) return null;
+      const now = new Date().toISOString();
+      const row = { id: `demo-ads-${Date.now()}`, ...item, status: 'aguardando_credenciais', settings: {}, lastError: '', createdAt: now, updatedAt: now };
+      setState((s) => ({ ...s, adIntegrations: [...s.adIntegrations, row] }));
+      return true;
+    },
+    updateAdIntegration: (id, patch) => {
+      setState((s) => ({ ...s, adIntegrations: s.adIntegrations.map((i) => i.id === id ? { ...i, ...patch, updatedAt: new Date().toISOString() } : i) }));
+      return true;
+    },
+    removeAdIntegration: (id) => {
+      setState((s) => ({ ...s, adIntegrations: s.adIntegrations.filter((i) => i.id !== id) }));
       return true;
     },
     saveAgentDraft: (draft) => {
