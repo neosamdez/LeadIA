@@ -1,0 +1,60 @@
+.real-analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.real-analytics-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.real-analytics-range,
+.real-analytics-metric p,
+.real-analytics-metric time {
+  color: var(--mute);
+}
+
+.real-analytics-metric {
+  padding: 20px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.real-analytics-metric h2,
+.real-analytics-metric h3 {
+  margin: 0;
+}
+
+.real-analytics-metric h3 {
+  font-size: 16px;
+}
+
+.real-analytics-metric ul {
+  list-style: none;
+  padding: 0;
+}
+
+.real-analytics-metric li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 12px;
+  border-bottom: 1px solid var(--line);
+  padding: 10px 0;
+}
+
+.real-analytics-count {
+  display: inline-block;
+  margin-bottom: 16px;
+  font-size: 32px;
+  font-weight: 800;
+}
+
+.real-analytics :focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 3px;
+}
