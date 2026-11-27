@@ -52,6 +52,8 @@ Para a atribuição de conversas, o Compose aplica também a migração 002_lead
 
 Para o contexto da organização, o Compose aplica a migração 003_org_context.sql. Ela adiciona a org_settings a proposta de valor, o público, as ofertas, o idioma, o fuso, o horário, as restrições, quem assume conversas e a prioridade do mês. O banco valida o fuso e o responsável e registra quem alterou o contexto. Antes de aplicar, faça backup. Depois do redeploy do DB Compose, abra Configurações > Contexto do negócio como owner ou admin, salve, recarregue e confira a prioridade na tela Hoje. Enquanto a 003 não estiver aplicada, o frontend mostra o aviso de migração pendente no lugar do formulário.
 
+Para os agentes, o Compose aplica a migração 004_agents.sql. Ela cria agents (rascunho por organização) e agent_revisions (revisões publicadas, imutáveis, com cópia do contexto do negócio). Só owner ou admin editam, publicam e restauram; restaurar cria uma revisão nova e não apaga o histórico. Publicar não liga envio automático em canal. Depois do redeploy do DB Compose, abra Agentes como owner ou admin, salve o rascunho, publique e confira a revisão na lista.
+
 ## Validação de SQL
 
 Usar somente PostgreSQL descartável, banco terminado em `_test`:

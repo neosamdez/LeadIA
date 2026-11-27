@@ -6,6 +6,7 @@ import { personas, defaultPersonaId } from '../data/personas';
 import { isRealMode } from '../lib/config';
 import { followUpDueDate } from '../lib/followUpDates';
 import { EMPTY_CONTEXT } from '../lib/orgContext';
+import { EMPTY_AGENT } from '../lib/agentSim';
 
 const STORAGE_KEY = 'leadia_demo_v1';
 
@@ -79,7 +80,17 @@ const defaultState = {
     useNvidiaApi: true,
   },
   tour: { active: false, step: 0 },
+  agent: { id: 'demo-agent', kind: 'atendimento', name: 'Atendimento', draft: EMPTY_AGENT, publishedRevisionId: null, revisions: [] },
 };
+
+// Revisões do modo demonstração: mesma regra do banco, numeração crescente e histórico preservado.
+function publishDemo(s, config, restoredFrom) {
+  const number = (s.agent.revisions[0]?.number || 0) + 1;
+  const ctx = s.settings.context || {};
+  const revision = { id: `demo-rev-${number}`, number, config, restoredFrom, createdBy: s.user?.id || '', createdAt: new Date().toISOString(),
+    context: { company_name: s.settings.companyName, value_proposition: ctx.valueProposition || '', offers: ctx.offers || '', timezone: ctx.timezone || 'America/Sao_Paulo' } };
+  return { ...s, agent: { ...s.agent, draft: config, publishedRevisionId: revision.id, revisions: [revision, ...s.agent.revisions] } };
+}
 
 function DemoAppProvider({ children }) {
   const [state, setState] = useState(() => mergeState(loadState()));
@@ -167,6 +178,21 @@ function DemoAppProvider({ children }) {
     },
     updateContext: (patch) => {
       setState((s) => ({ ...s, settings: { ...s.settings, context: { ...EMPTY_CONTEXT, ...s.settings.context, ...patch, updatedAt: new Date().toISOString(), updatedBy: s.user?.id || '' } } }));
+      return true;
+    },
+    saveAgentDraft: (draft) => {
+      setState((s) => ({ ...s, agent: { ...s.agent, draft, updatedAt: new Date().toISOString() } }));
+      return true;
+    },
+    publishAgent: (draft) => {
+      setState((s) => publishDemo(s, draft, null));
+      return true;
+    },
+    restoreAgentRevision: (revisionId) => {
+      setState((s) => {
+        const old = s.agent.revisions.find((r) => r.id === revisionId);
+        return old ? publishDemo(s, old.config, old.id) : s;
+      });
       return true;
     },
     applyPersona: (personaId) => setState((s) => {
