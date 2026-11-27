@@ -17,13 +17,25 @@ test('Pages encaminha a sessão ao Render sem cookies e preserva o status', asyn
     assert.equal(url.href, 'https://render.example/ai/v1/complete');
     assert.equal(options.headers.get('Authorization'), 'Bearer sessao');
     assert.equal(options.headers.get('Cookie'), null);
-    assert.equal(options.redirect, 'error');
+    assert.equal(options.redirect, 'manual');
     assert.equal(await new Response(options.body).text(), '{}');
     return Response.json({ error: 'unauthorized' }, { status: 401 });
   });
   const response = await onRequest({ request, env });
   assert.equal(response.status, 401);
   assert.deepEqual(await response.json(), { error: 'unauthorized' });
+});
+
+test('Pages bloqueia redirecionamentos do backend da IA', async t => {
+  t.mock.method(globalThis, 'fetch', async () => new Response(null, {
+    status: 307, headers: { Location: 'https://untrusted.example' },
+  }));
+  const response = await onRequest({
+    request: new Request('https://pages.example/ai/v1/complete', { method: 'POST' }),
+    env: { LEADIA_AI_ORIGIN: 'https://render.example' },
+  });
+  assert.equal(response.status, 502);
+  assert.equal(response.headers.get('Location'), null);
 });
 
 test('piloto valida a sessão no gateway gerenciado sem habilitar WhatsApp', async t => {
