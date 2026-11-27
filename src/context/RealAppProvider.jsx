@@ -8,22 +8,23 @@ import * as conversationsService from '../services/conversations';
 import * as followUpsService from '../services/followUps';
 import * as goalsService from '../services/goals';
 import * as settingsService from '../services/settings';
+import * as agentsService from '../services/agents';
 import { appLeadToDb, dbLeadToApp, dbMessageToApp, dbFollowUpToApp, appFollowUpToDb } from '../lib/mappers';
 
 const empty = {
   members: [], leads: [], conversations: {}, leadEvents: {}, followUps: [], dismissedAlerts: [],
   goals: { monthlyLeads: 0, conversionRate: 0, revenue: 0, responseMinutes: 0 },
   settings: { companyName: '', segment: '', tone: '', autoReply: false, followUp: true, useNvidiaApi: false, nvidiaApiKey: '', context: null },
-  tour: { active: false, step: 0 }, activePersonaId: null,
+  tour: { active: false, step: 0 }, activePersonaId: null, agent: null,
 };
 const noDemoAction = () => {};
 
 async function loadOrganization(orgId) {
-  const [leads, convs, followUps, goals, settings, eventsResult, members] = await Promise.all([
+  const [leads, convs, followUps, goals, settings, eventsResult, members, agent] = await Promise.all([
     leadsService.listLeads(orgId), conversationsService.listConversations(orgId),
     followUpsService.listFollowUps(orgId), goalsService.getGoals(orgId), settingsService.getOrgSettings(orgId),
     requireSupabase().from('lead_events').select('*').eq('org_id', orgId).order('created_at'),
-    listOrgMembers(orgId),
+    listOrgMembers(orgId), agentsService.getAgent(orgId),
   ]);
   if (eventsResult.error) throw eventsResult.error;
   const conversations = Object.fromEntries(convs.map(c => [c.lead_id,
@@ -32,7 +33,7 @@ async function loadOrganization(orgId) {
   for (const event of eventsResult.data) {
     (leadEvents[event.lead_id] ||= []).push({ ...event, time: new Date(event.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) });
   }
-  return { ...empty, members, leads: leads.map(dbLeadToApp), conversations, leadEvents,
+  return { ...empty, members, agent, leads: leads.map(dbLeadToApp), conversations, leadEvents,
     followUps: followUps.map(dbFollowUpToApp), goals: goals || empty.goals,
     settings: { ...empty.settings, ...settings },
   };
@@ -171,6 +172,12 @@ export default function RealAppProvider({ children }) {
     updateGoals: patch => mutate(orgId => goalsService.upsertGoals(orgId, { ...data.goals, ...patch })),
     updateSettings: patch => mutate(orgId => settingsService.upsertOrgSettings(orgId, patch)),
     updateContext: patch => mutate(orgId => settingsService.updateOrgContext(orgId, patch)),
+    saveAgentDraft: draft => mutate(orgId => agentsService.saveAgentDraft(orgId, data.agent?.id, draft)),
+    publishAgent: draft => mutate(async orgId => {
+      const id = await agentsService.saveAgentDraft(orgId, data.agent?.id, draft);
+      return agentsService.publishAgent(id);
+    }),
+    restoreAgentRevision: revisionId => mutate(() => agentsService.restoreRevision(revisionId)),
     dismissAlert: id => setData(s => ({ ...s, dismissedAlerts: [...s.dismissedAlerts, id] })),
     clearDismissedAlerts: () => setData(s => ({ ...s, dismissedAlerts: [] })),
     applyPersona: noDemoAction, resetDemo: noDemoAction, simulateScenario: noDemoAction,

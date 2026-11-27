@@ -9,6 +9,7 @@ import Conversations from './pages/Conversations';
 import Analytics from './pages/Analytics';
 import Kanban from './pages/Kanban';
 import Alertas from './pages/Alertas';
+import Agentes from './pages/Agentes';
 import Hoje from './pages/Hoje';
 import Arquitetura from './pages/Arquitetura';
 import Settings from './pages/Settings';
@@ -57,6 +58,7 @@ export default function App() {
             <Route path="pipeline" element={<Kanban />} />
             <Route path="hoje" element={<Hoje />} />
             <Route path="alertas" element={<Alertas />} />
+            <Route path="agentes" element={<Agentes />} />
             <Route path="arquitetura" element={<Arquitetura />} />
             <Route path="configuracoes" element={<Settings />} />
           </Route>
