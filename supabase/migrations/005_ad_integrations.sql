@@ -54,7 +54,7 @@ begin
   return new;
 end;
 $$;
-revoke all on function public.guard_ad_integration() from public;
+revoke all on function public.guard_ad_integration() from public,anon,authenticated;
 drop trigger if exists ad_integrations_guard on public.ad_integrations;
 create trigger ad_integrations_guard before insert or update on public.ad_integrations
 for each row execute function public.guard_ad_integration();

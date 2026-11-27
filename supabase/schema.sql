@@ -100,7 +100,7 @@ language sql stable security definer set search_path=public,pg_temp as $$
  select exists(select 1 from public.memberships where org_id=target_org and user_id=auth.uid()
  and role=any(case when admin_only then array['owner','admin'] else array['owner','admin','member'] end));
 $$;
-revoke all on function public.is_org_member(uuid),public.can_write_org(uuid,boolean) from public;
+revoke all on function public.is_org_member(uuid),public.can_write_org(uuid,boolean) from public,anon;
 grant execute on function public.is_org_member(uuid),public.can_write_org(uuid,boolean) to authenticated,service_role;
 -- Bootstrap atômico: não permite se adicionar a organizações de outras pessoas.
 create or replace function public.get_or_create_org() returns public.organizations
@@ -120,7 +120,7 @@ begin
  return org;
 end;
 $$;
-revoke all on function public.get_or_create_org() from public;
+revoke all on function public.get_or_create_org() from public,anon;
 grant execute on function public.get_or_create_org() to authenticated;
 create or replace function public.append_message(p_lead_id uuid,p_sender text,p_content text)
 returns public.messages language plpgsql security invoker set search_path=public,pg_temp as $$
@@ -136,7 +136,7 @@ begin
  return msg;
 end;
 $$;
-revoke all on function public.append_message(uuid,text,text) from public;
+revoke all on function public.append_message(uuid,text,text) from public,anon;
 grant execute on function public.append_message(uuid,text,text) to authenticated;
 create or replace function public.prevent_org_move() returns trigger language plpgsql as $$
 begin
@@ -201,6 +201,6 @@ end;
 $$;
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created after insert on auth.users for each row execute function public.handle_new_user();
-revoke all on function public.set_updated_at(),public.prevent_org_move(),public.lead_audit_event(),public.handle_new_user() from public;
+revoke all on function public.set_updated_at(),public.prevent_org_move(),public.lead_audit_event(),public.handle_new_user() from public,anon,authenticated;
 notify pgrst,'reload schema';
 commit;

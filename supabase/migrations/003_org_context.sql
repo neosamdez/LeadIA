@@ -66,7 +66,7 @@ begin
   return new;
 end;
 $$;
-revoke all on function public.validate_org_context() from public;
+revoke all on function public.validate_org_context() from public,anon,authenticated;
 
 drop trigger if exists org_context_validate on public.org_settings;
 create trigger org_context_validate before insert or update on public.org_settings
