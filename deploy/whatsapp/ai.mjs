@@ -16,7 +16,7 @@ function json(response, status, body) {
 }
 
 /** Valida o token no GoTrue e devolve o id do usuário, ou null. Resultado fica em cache por 60s. */
-export async function verifyUser(token, { authUrl, fetch: fetchImpl = fetch, cache = new Map(), now = Date.now }) {
+export async function verifyUser(token, { authUrl, apiKey, fetch: fetchImpl = fetch, cache = new Map(), now = Date.now }) {
   if (!tokenPattern.test(token ?? '')) return null;
   const key = createHash('sha256').update(token).digest('hex');
   const hit = cache.get(key);
@@ -25,7 +25,7 @@ export async function verifyUser(token, { authUrl, fetch: fetchImpl = fetch, cac
   let userId = null;
   try {
     const response = await fetchImpl(`${authUrl}/user`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}`, ...(apiKey && { apikey: apiKey }) },
       signal: AbortSignal.timeout(5000),
     });
     if (response.ok) {
@@ -112,7 +112,7 @@ export async function callClaude({ system, maxTokens, messages }, { claudeKey, c
   return text;
 }
 
-export function createAiHandler({ authUrl, claudeKey, claudeModel, fetch: fetchImpl = fetch, log = console.log, now = Date.now }) {
+export function createAiHandler({ authUrl, apiKey, claudeKey, claudeModel, fetch: fetchImpl = fetch, log = console.log, now = Date.now }) {
   const cache = new Map();
   const allow = createLimiter({ now });
 
@@ -125,7 +125,7 @@ export function createAiHandler({ authUrl, claudeKey, claudeModel, fetch: fetchI
       }
 
       const match = /^Bearer (.+)$/.exec(request.headers.authorization ?? '');
-      const userId = await verifyUser(match?.[1]?.trim(), { authUrl, fetch: fetchImpl, cache, now });
+      const userId = await verifyUser(match?.[1]?.trim(), { authUrl, apiKey, fetch: fetchImpl, cache, now });
       if (!userId) return json(response, 401, { error: 'unauthorized' });
       if (!allow(userId)) return json(response, 429, { error: 'rate_limited' });
 
