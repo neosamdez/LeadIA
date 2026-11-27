@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, MessageSquare, BarChart3, LayoutGrid, Bell, Shield, Settings, LogOut, Bot, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, MessageSquare, BarChart3, LayoutGrid, Bell, Shield, Settings, LogOut, Bot, Menu, X, Sun } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Tour from '../components/Tour';
 import './AppLayout.css';
 
 const nav = [
+  { to: '/app/hoje', icon: Sun, label: 'Hoje' },
   { to: '/app', end: true, icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/app/leads', icon: Users, label: 'Leads' },
   { to: '/app/conversas', icon: MessageSquare, label: 'Conversas' },
