@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { History, Plus, RotateCcw, Save, Send, Trash2, FlaskConical } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import OrgContextForm from '../components/OrgContextForm';
+import AgentWizard from '../components/AgentWizard';
+import { applyBehavior } from '../lib/agentPresets';
 import { ACTIONS, DAYS, ROUTE_ACTIONS, SCENARIOS, normalizeAgent, scenarioDate, simulate } from '../lib/agentSim';
 import './Agentes.css';
 
@@ -66,6 +68,14 @@ function Editor({ status, setStatus, agent, settings, canEdit, pendingWrites, sa
   const toggleDay = d => setForm(f => ({ ...f, hours: { ...f.hours, days: f.hours.days.includes(d) ? f.hours.days.filter(x => x !== d) : [...f.hours.days, d] } }));
   const setRule = (i, key) => e => setForm(f => ({ ...f, routingRules: f.routingRules.map((r, j) => j === i ? { ...r, [key]: e.target.value } : r) }));
 
+  function applyProposal(behavior, source) {
+    const next = applyBehavior(config, behavior);
+    setForm(next);
+    setQuestions(next.qualificationQuestions.join('\n'));
+    setExcluded(next.excludedTopics.join('\n'));
+    setStatus(`${source}: aplicado ao rascunho. Revise, teste no simulador e salve.`);
+  }
+
   async function run(action, done) {
     setStatus('');
     const result = await action();
@@ -74,6 +84,8 @@ function Editor({ status, setStatus, agent, settings, canEdit, pendingWrites, sa
   }
 
   return (
+    <>
+    <AgentWizard settings={settings} disabled={!canEdit} onApply={applyProposal} />
     <div className="ag-grid">
       <form className="card ag-form" onSubmit={e => { e.preventDefault(); run(() => saveAgentDraft(config), 'Rascunho salvo.'); }}>
         <div className="ag-status">
@@ -158,6 +170,7 @@ function Editor({ status, setStatus, agent, settings, canEdit, pendingWrites, sa
           onRestore={id => run(() => restoreAgentRevision(id), 'Revisão restaurada e publicada.')} />
       </aside>
     </div>
+    </>
   );
 }
 

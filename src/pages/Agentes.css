@@ -55,3 +55,27 @@
 .ag-revs li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 14px; }
 .ag-revs li:first-child { border-top: 0; padding-top: 0; }
 .ag-revs li .badge { margin-left: 8px; }
+
+/* Assistente por objetivo */
+.ag-wizard { margin-bottom: 16px; padding: 18px 20px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surf); }
+.ag-wizard-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+.ag-wizard-head h2 { margin: 0; font-size: 16px; font-weight: 650; }
+.ag-wizard-head p { margin: 3px 0 0; font-size: 13px; color: var(--mute); max-width: 62ch; }
+.ag-objectives { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.ag-objective { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px 14px; text-align: left; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--ink); }
+.ag-objective svg { color: var(--acc); margin-bottom: 4px; }
+.ag-objective strong { font-size: 13.5px; font-weight: 600; }
+.ag-objective span { font-size: 12.5px; color: var(--mute); line-height: 1.4; }
+.ag-objective:hover:not(:disabled) { border-color: var(--acc); background: var(--acc-bg); }
+.ag-objective:disabled { opacity: .55; cursor: not-allowed; }
+.ag-gen { display: grid; gap: 14px; }
+.ag-gen select, .ag-gen textarea { font-weight: 400; }
+.ag-gen-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.ag-hint.warn { color: var(--warn); }
+.ag-error { margin: 0; padding: 8px 12px; border-radius: 6px; background: var(--danger-bg); color: var(--danger); font-size: 13px; }
+.ag-preview dl { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 10px 14px; margin: 12px 0 0; font-size: 13.5px; }
+.ag-preview dt { color: var(--mute); font-weight: 600; font-size: 12.5px; }
+.ag-preview dd { margin: 0; overflow-wrap: anywhere; }
+.ag-preview ol, .ag-preview ul { margin: 0; padding-left: 18px; }
+.ag-preview code { font-size: 12px; background: var(--surf-2); padding: 1px 5px; border-radius: 4px; }
+@media (max-width: 600px) { .ag-preview dl { grid-template-columns: minmax(0, 1fr); gap: 2px; } .ag-preview dd { margin-bottom: 8px; } }

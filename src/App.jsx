@@ -12,7 +12,6 @@ import Alertas from './pages/Alertas';
 import Agentes from './pages/Agentes';
 import Integracoes from './pages/Integracoes';
 import Hoje from './pages/Hoje';
-import Arquitetura from './pages/Arquitetura';
 import Settings from './pages/Settings';
 import { DataDeletion, PrivacyPolicy } from './pages/Privacy';
 
@@ -61,7 +60,7 @@ export default function App() {
             <Route path="alertas" element={<Alertas />} />
             <Route path="agentes" element={<Agentes />} />
             <Route path="integracoes" element={<Integracoes />} />
-            <Route path="arquitetura" element={<Arquitetura />} />
+            <Route path="arquitetura" element={<Navigate to="/app" replace />} />
             <Route path="configuracoes" element={<Settings />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

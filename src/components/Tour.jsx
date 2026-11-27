@@ -10,7 +10,6 @@ const steps = [
   { path: '/app/pipeline', title: 'Pipeline', text: 'Arraste leads entre etapas no Kanban para atualizar o funil em tempo real.' },
   { path: '/app/analytics', title: 'Analytics', text: 'Analise funil, canais, motivos de perda e recomendações da IA para decisões comerciais.' },
   { path: '/app/alertas', title: 'Alertas', text: 'Veja ações prioritárias: leads quentes, propostas pendentes e objeções detectadas.' },
-  { path: '/app/arquitetura', title: 'Arquitetura & LGPD', text: 'Mostre à banca o fluxo técnico, segurança, limites da Meta e conformidade com LGPD.' },
   { path: '/app/configuracoes', title: 'Configurações', text: 'Ajuste o tom da IA, regras de follow-up e resete a demonstração quando necessário.' },
 ];
 

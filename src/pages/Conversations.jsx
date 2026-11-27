@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Send, Bot, User, Sparkles, Lightbulb, UserCheck, AlertCircle, Zap, History, X, Copy, FileText, CalendarPlus, Brain, CheckCircle2 } from 'lucide-react';
+import { Send, Bot, User, Sparkles, UserCheck, AlertCircle, Zap, History, Copy, FileText, CalendarPlus, Brain, CheckCircle2, Search, SlidersHorizontal, ArrowLeft, Pause, Play } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { dateInputValue } from '../lib/followUpDates';
 import { generateNvidiaReply, generateNvidiaClientMessage, isNvidiaConfigured } from '../services/nvidia';
+import Modal from '../components/Modal';
+import './Conversations.css';
 
 function timeNow() {
   const d = new Date();
@@ -43,6 +45,17 @@ const whatsappDeliveryLabels = {
   failed: 'Falha de envio', uncertain: 'Envio a confirmar',
 };
 
+
+const PLAYBOOK_OPTIONS = [
+  ['qualificar', 'Qualificar', 'Necessidade, prazo e orçamento'],
+  ['objeção', 'Contornar objeção', 'Responde à dúvida sobre preço ou valor'],
+  ['proposta', 'Encaminhar proposta', 'Confirma interesse e próximo passo'],
+  ['agendar', 'Agendar', 'Oferece dois horários'],
+  ['recuperar', 'Recuperar', 'Retoma uma conversa parada'],
+];
+
+const EVENT_LABEL = { status: 'Status', handoff: 'Handoff', simulation: 'Simulação', playbook: 'Playbook', ia: 'IA', event: 'Evento' };
+
 export default function Conversations() {
   const { leads, conversations, sendMessage, updateLeadStatus, settings, recordEvent, leadEvents, addFollowUp, setWhatsAppPause, pendingWrites, members = [], assignLead, user } = useApp();
   const { leadId } = useParams();
@@ -58,7 +71,9 @@ export default function Conversations() {
   const [copied, setCopied] = useState(false);
   const [showProposal, setShowProposal] = useState(false);
   const [followUpForm, setFollowUpForm] = useState({ date: '', min: '' });
-  const followUpDialog = useRef(null);
+  const [followUpOpen, setFollowUpOpen] = useState(false);
+  const [panel, setPanel] = useState(null); // 'acoes' | 'ia' | 'inbox'
+  const [mobileView, setMobileView] = useState(leadId ? 'chat' : 'list');
   const endRef = useRef(null);
   const typingTimer = useRef();
   const abortRef = useRef();
@@ -105,14 +120,15 @@ export default function Conversations() {
     return `Olá ${lead.name.split(' ')[0]},\n\nConforme nossa conversa, segue uma proposta inicial para ${lead.interest}.\n\nEmpresa: ${settings.companyName}\nSegmento: ${settings.segment}\nValor estimado: R$ ${lead.value}\nCondição: a definir conforme necessidade\n\nPróximo passo: confirmar escopo e agendar validação final.\n\nAtenciosamente,\nEquipe ${settings.companyName} (via LeadIA)`;
   }
 
-  function pick(id) { setSelected(id); navigate(`/app/conversas/${id}`); }
+  function pick(id) { setSelected(id); setMobileView('chat'); setPanel(null); navigate(`/app/conversas/${id}`); }
 
   function openFollowUp() {
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
     setFollowUpForm({ date: dateInputValue(tomorrow), min: dateInputValue(today) });
-    followUpDialog.current?.showModal();
+    setPanel(null);
+    setFollowUpOpen(true);
   }
 
   async function submitFollowUp(event) {
@@ -123,7 +139,7 @@ export default function Conversations() {
       leadId: lead.id, title: 'Follow-up: ' + lead.name, note: 'Retomar ' + lead.interest, dueAt: date.toISOString(),
     });
     if (result === null) return;
-    followUpDialog.current?.close();
+    setFollowUpOpen(false);
     await recordEvent(lead.id, { type: 'event', text: 'Follow-up agendado pelo consultor' });
   }
 
@@ -271,202 +287,221 @@ export default function Conversations() {
     recordEvent(lead.id, { type: 'handoff', text: 'Handoff para atendimento humano' });
   }
 
-  return (
-    <div>
-      <div className="page-head">
-        <div>
-          <h1>Conversas</h1>
-          <p>Acompanhe o atendimento da IA, use sugestões inteligentes e intervenha quando necessário.</p>
-        </div>
+  const ai = isNvidiaConfigured(settings);
+  const counts = {
+    all: leads.length,
+    whatsapp: leads.filter(l => l.channel === 'WhatsApp').length,
+    paused: leads.filter(l => l.whatsappConnected && l.whatsappPaused).length,
+  };
+  const busy = typing || simulating;
+  const firstName = lead?.name?.split(' ')[0] || '';
+  const actions = lead ? [
+    { id: 'timeline', label: 'Timeline', hint: 'Mensagens e eventos em ordem', icon: History, onClick: () => { setPanel(null); setShowTimeline(true); } },
+    { id: 'resumo', label: copied ? 'Copiado' : 'Copiar resumo', hint: 'Ficha do lead para colar', icon: copied ? CheckCircle2 : Copy, onClick: copyLeadSummary },
+    { id: 'proposta', label: 'Proposta', hint: 'Texto pronto para enviar', icon: FileText, onClick: () => { setPanel(null); setShowProposal(true); } },
+    { id: 'followup', label: 'Agendar retorno', hint: 'Cria um follow-up', icon: CalendarPlus, onClick: openFollowUp },
+    whatsapp
+      ? { id: 'pausa', label: lead.whatsappPaused ? 'Retomar automação' : 'Pausar automação', hint: 'Liga ou desliga o agente nesta conversa', icon: lead.whatsappPaused ? Play : Pause,
+        onClick: () => setWhatsAppPause(lead.id, !lead.whatsappPaused), disabled: Boolean(pendingWrites) }
+      : { id: 'handoff', label: 'Passar para pessoa', hint: 'Avisa o lead e registra o handoff', icon: UserCheck, onClick: () => { handoff(); setPanel(null); } },
+    !whatsapp && { id: 'simular', label: simulating ? 'Simulando…' : 'Simular negociação', hint: '4 trocas entre lead e IA', icon: Zap, onClick: () => { setPanel(null); simulateNegotiation(); }, disabled: busy },
+  ].filter(Boolean) : [];
+
+  const inbox = (
+    <div className="deck-inbox-body">
+      <div className="deck-search">
+        <Search size={15} aria-hidden="true" />
+        <input type="search" aria-label="Buscar na caixa de entrada" placeholder="Buscar nome, interesse ou mensagem" value={search} onChange={event => setSearch(event.target.value)} />
       </div>
+      <div className="deck-filters" role="group" aria-label="Filtrar caixa de entrada">
+        {[['all', 'Todas'], ['whatsapp', 'WhatsApp'], ['paused', 'Pausadas']].map(([key, label]) => (
+          <button key={key} type="button" aria-pressed={inboxFilter === key} className={inboxFilter === key ? 'on' : ''} onClick={() => setInboxFilter(key)}>
+            {label}<span>{counts[key]}</span>
+          </button>
+        ))}
+      </div>
+      <ul className="deck-list">
+        {visibleLeads.length === 0 && <li className="deck-empty" role="status">
+          {leads.length ? 'Nenhuma conversa corresponde à busca e ao filtro.' : 'Os contatos aparecem aqui quando entram no CRM.'}
+        </li>}
+        {visibleLeads.map(l => (
+          <li key={l.id}>
+            <button type="button" className={l.id === lead?.id ? 'deck-thread on' : 'deck-thread'} aria-current={l.id === lead?.id ? 'true' : undefined} onClick={() => pick(l.id)}>
+              <span className="deck-avatar" aria-hidden="true">{l.name.slice(0, 2).toUpperCase()}</span>
+              <span className="deck-thread-main">
+                <span className="deck-thread-top"><strong>{l.name}</strong><time>{l.time}</time></span>
+                <span className="deck-thread-msg">{l.lastMessage || 'Sem mensagens'}</span>
+                <span className="deck-thread-meta">{l.channel} · {l.status}{l.whatsappConnected && l.whatsappPaused ? ' · pausada' : ''}</span>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 
-      <div className="card conversation-workspace">
-        <div style={{ borderRight: '1px solid var(--line)', background: 'var(--surf-2)', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-          <div style={{ padding: 14, borderBottom: '1px solid var(--line)', display: 'grid', gap: 8 }}>
-            <strong style={{ fontSize: 14 }}>Caixa de entrada</strong>
-            <input type="search" aria-label="Buscar na caixa de entrada" placeholder="Nome, interesse ou mensagem" value={search} onChange={event => setSearch(event.target.value)} />
-            <select aria-label="Filtrar caixa de entrada" value={inboxFilter} onChange={event => setInboxFilter(event.target.value)}>
-              <option value="all">Todas as conversas</option>
-              <option value="whatsapp">WhatsApp</option>
-              <option value="paused">Automação pausada</option>
-            </select>
-          </div>
-          <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
-            {visibleLeads.length === 0 && <p role="status" style={{ padding: '0 14px', fontSize: 13, color: 'var(--mute)' }}>
-              {leads.length ? 'Nenhuma conversa corresponde à busca e ao filtro.' : 'Os contatos aparecerão aqui quando forem adicionados ao CRM.'}
-            </p>}
-            {visibleLeads.map(l => (
-              <button key={l.id} onClick={() => pick(l.id)} style={{ width: '100%', textAlign: 'left', padding: 14, border: 0, borderBottom: '1px solid var(--line)', background: l.id === lead?.id ? 'var(--surf-3)' : 'transparent', cursor: 'pointer' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                  <strong style={{ fontSize: 14, color: 'var(--ink)' }}>{l.name}</strong>
-                  <span style={{ fontSize: 12, color: 'var(--mute)' }}>{l.time}</span>
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--mute)', marginTop: 2 }}>{l.channel} · {l.status}</div>
-                <div style={{ fontSize: 13, color: 'var(--mute)', marginTop: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.lastMessage}</div>
-              </button>
-            ))}
-          </div>
+  return (
+    <div className={`deck deck-view-${mobileView}`}>
+      <header className="deck-bar">
+        <div className="deck-title">
+          <span className="deck-kicker">Central de conversas</span>
+          <h1>Conversas</h1>
         </div>
+        <dl className="deck-stats">
+          <div><dt>Ativas</dt><dd>{counts.all}</dd></div>
+          <div><dt>WhatsApp</dt><dd>{counts.whatsapp}</dd></div>
+          <div><dt>Pausadas</dt><dd>{counts.paused}</dd></div>
+          <div><dt>Motor IA</dt><dd className={ai ? 'live' : 'idle'}><span className="deck-dot" aria-hidden="true" />{ai ? 'Online' : 'Local'}</dd></div>
+        </dl>
+      </header>
 
-        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0, overflow: 'hidden' }}>
+      <div className="deck-grid">
+        <aside className="deck-inbox" aria-label="Caixa de entrada">
+          <div className="deck-label">Caixa de entrada</div>
+          {inbox}
+        </aside>
+
+        <section className="deck-chat" aria-label={lead ? `Conversa com ${lead.name}` : 'Conversa'}>
           {lead ? (
             <>
-              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 17, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>{lead.name} <span className={`badge ${intent.tone}`} style={{ fontSize: 11 }}><Brain size={11} style={{ marginRight: 4 }} />{intent.label}</span></div>
-                  <div style={{ fontSize: 12, color: 'var(--mute)', marginTop: 2 }}>{lead.channel} · {lead.interest} · <span className="badge blue">{lead.status}</span>{whatsapp && lead.whatsappPaused && <> · Automação pausada</>}</div>
-                  {user?.mode === 'real' && members.length > 0 && <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, fontSize: 13 }}>
-                    Responsável
-                    <select aria-label="Responsável pela conversa" value={lead.ownerId || ''} disabled={!canAssign || Boolean(pendingWrites)}
-                      onChange={event => assignLead(lead.id, event.target.value || null)}>
-                      <option value="">Sem responsável</option>
-                      {lead.ownerId && !assignees.some(member => member.id === lead.ownerId) && <option value={lead.ownerId} disabled>{owner?.name || 'Responsável indisponível'}</option>}
-                      {assignees.map(member => <option key={member.id} value={member.id}>{member.name}</option>)}
-                    </select>
-                  </label>}
+              <header className="deck-chat-head">
+                <button type="button" className="deck-icon-btn deck-back" aria-label="Voltar para a caixa de entrada" onClick={() => setMobileView('list')}><ArrowLeft size={17} /></button>
+                <span className="deck-avatar lg" aria-hidden="true">{lead.name.slice(0, 2).toUpperCase()}</span>
+                <div className="deck-who">
+                  <h2>{lead.name}</h2>
+                  <p>{lead.channel} · {lead.interest}{owner ? ` · ${owner.name}` : ''}</p>
                 </div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                  {[
-                    { label: 'Timeline', icon: History, onClick: () => setShowTimeline(true) },
-                    { label: copied ? 'Copiado' : 'Resumo', icon: copied ? CheckCircle2 : Copy, onClick: copyLeadSummary },
-                    { label: 'Proposta', icon: FileText, onClick: () => setShowProposal(true) },
-                    whatsapp
-                      ? { label: lead.whatsappPaused ? 'Retomar automação' : 'Pausar automação', icon: UserCheck,
-                        onClick: () => setWhatsAppPause(lead.id, !lead.whatsappPaused), disabled: Boolean(pendingWrites) }
-                      : { label: 'Handoff', icon: UserCheck, onClick: handoff },
-                  ].map(({ label, icon: Icon, onClick, disabled }) => (
-                    <button key={label} className="btn btn-sm btn-outline" style={{ padding: '5px 9px', fontSize: 12 }} onClick={onClick} disabled={disabled}><Icon size={13} /> {label}</button>
-                  ))}
-                  <button type="button" className="btn btn-sm btn-outline" onClick={openFollowUp}><CalendarPlus size={13} /> Follow-up</button>
-                  {!whatsapp && <><button className="btn btn-sm btn-outline" style={{ padding: '5px 9px', fontSize: 12 }} onClick={() => sendAI()} disabled={typing || simulating}><Sparkles size={13} /> IA</button>
-                  <button className="btn btn-sm btn-primary" style={{ padding: '5px 9px', fontSize: 12 }} onClick={simulateNegotiation} disabled={typing || simulating}><Zap size={13} /> {simulating ? 'Simulando...' : 'Simular'}</button></>}
+                <div className="deck-chips">
+                  <span className={`deck-chip tone-${intent.tone}`}><Brain size={12} aria-hidden="true" />{intent.label}</span>
+                  <span className="deck-chip">{lead.status}</span>
+                  {whatsapp && lead.whatsappPaused && <span className="deck-chip tone-yellow">Automação pausada</span>}
                 </div>
-              </div>
+                <button type="button" className="btn btn-outline btn-sm deck-actions-btn" onClick={() => setPanel('acoes')} aria-haspopup="dialog">
+                  <SlidersHorizontal size={14} /> Ações
+                </button>
+              </header>
 
-              <div style={{ flex: 1, padding: 16, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, background: 'var(--bg-alt)' }}>
-                {msgs.length === 0 && <div style={{ color: 'var(--mute)', fontSize: 14 }}>Nenhuma mensagem ainda. Envie a primeira mensagem.</div>}
+              <div className="deck-stream" aria-live="polite">
+                {msgs.length === 0 && <p className="deck-empty">Nenhuma mensagem ainda. Envie a primeira.</p>}
                 {msgs.map((m, i) => {
-                  const isClient = m.from === 'client';
-                  const isIA = m.from === 'ia';
+                  const kind = m.from === 'client' ? 'client' : m.from === 'ia' ? 'ia' : 'agent';
+                  const who = kind === 'client' ? firstName || 'Cliente' : kind === 'ia' ? 'LeadIA' : whatsapp ? 'Nota interna' : 'Consultor';
                   return (
-                    <div key={i} style={{ alignSelf: isClient ? 'flex-start' : 'flex-end', maxWidth: '78%' }}>
-                      <div style={{
-                        padding: '10px 13px', borderRadius: 8,
-                        borderBottomLeftRadius: isClient ? 4 : 16, borderBottomRightRadius: isClient ? 16 : 4,
-                        background: isClient ? 'var(--surf-3)' : isIA ? 'var(--wa-bg)' : 'var(--blue-bg)',
-                        color: 'var(--ink)', fontSize: 14, lineHeight: 1.45
-                      }}>
-                        {m.text}
-                        <div style={{ fontSize: 11, color: 'var(--mute)', marginTop: 4, display: 'flex', gap: 4, alignItems: 'center' }}>
-                          {isClient ? <User size={11} /> : <Bot size={11} />} {isClient ? 'Cliente' : isIA ? 'LeadIA' : whatsapp ? 'Nota interna' : 'Consultor'} · {m.time}
-                          {m.whatsappDelivery && <> · {whatsappDeliveryLabels[m.whatsappDelivery]}</>}
-                        </div>
-                      </div>
+                    <div key={i} className={`deck-msg ${kind}`}>
+                      <div className="deck-msg-meta">{kind === 'client' ? <User size={11} /> : <Bot size={11} />}{who}<time>{m.time}</time>
+                        {m.whatsappDelivery && <span>· {whatsappDeliveryLabels[m.whatsappDelivery]}</span>}</div>
+                      <div className="deck-bubble">{m.text}</div>
                     </div>
                   );
                 })}
-                {typing && (
-                  <div style={{ alignSelf: 'flex-end', maxWidth: '78%' }}>
-                    <div style={{ padding: '10px 13px', borderRadius: 8, borderBottomRightRadius: 4, background: 'var(--wa-bg)', color: 'var(--mute)', fontSize: 14 }}>
-                      <Bot size={12} style={{ marginRight: 6 }} /> {isNvidiaConfigured(settings) ? 'LeadIA (NVIDIA) está gerando resposta...' : 'LeadIA está digitando...'}
-                    </div>
-                  </div>
-                )}
-                {aiError && (
-                  <div style={{ alignSelf: 'flex-end', maxWidth: '78%' }}>
-                    <div style={{ padding: '10px 13px', borderRadius: 8, background: '#F0FDFA', color: '#115E59', fontSize: 13, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                      <AlertCircle size={14} style={{ marginTop: 2, flexShrink: 0 }} /> <span>{aiError}</span>
-                    </div>
-                  </div>
-                )}
+                {typing && <div className="deck-msg ia"><div className="deck-bubble deck-typing"><span /><span /><span /> {ai ? 'Gerando resposta' : 'Digitando'}</div></div>}
+                {aiError && <div className="deck-alert" role="alert"><AlertCircle size={14} /> {aiError}</div>}
                 <div ref={endRef} />
               </div>
 
-              <div style={{ padding: 12, borderTop: '1px solid var(--line)', display: 'grid', gap: 8 }}>
-                {!whatsapp && <><div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <span style={{ fontSize: 11, color: 'var(--mute)', display: 'flex', gap: 4, alignItems: 'center', marginRight: 2 }}><Sparkles size={12} /> Playbooks:</span>
-                  {[['qualificar', 'Qualificar'], ['objeção', 'Objeção'], ['proposta', 'Proposta'], ['agendar', 'Agendar'], ['recuperar', 'Recuperar']].map(([key, label]) => (
-                    <button key={key} className="btn btn-sm btn-outline" style={{ fontSize: 11, padding: '4px 8px' }} disabled={typing || simulating} onClick={() => sendAI(undefined, key)}>{label}</button>
-                  ))}
-                </div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {suggestions.slice(0, 3).map((s, i) => (
-                    <button key={i} className="btn btn-sm btn-outline" style={{ whiteSpace: 'normal', textAlign: 'left', height: 'auto', padding: '6px 8px', fontSize: 11, flex: '1 1 180px' }} onClick={() => sendAI(s)}>
-                      {s.length > 60 ? s.slice(0, 60) + '...' : s}
-                    </button>
-                  ))}
-                </div></>}
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <input value={draft} onChange={e => setDraft(e.target.value)} placeholder={whatsapp ? 'Escreva uma nota interna para a equipe' : 'Digite uma mensagem como consultor...'} onKeyDown={e => { if (e.key === 'Enter') send('consultor'); }} />
-                  <button className="btn btn-primary btn-sm" onClick={() => send('consultor')}><Send size={15} /> {whatsapp ? 'Salvar nota' : 'Enviar'}</button>
-                </div>
-              </div>
+              <form className="deck-composer" onSubmit={e => { e.preventDefault(); send('consultor'); }}>
+                {!whatsapp && (
+                  <button type="button" className="deck-ai-btn" onClick={() => setPanel('ia')} disabled={busy} aria-haspopup="dialog">
+                    <Sparkles size={15} /> <span>IA</span>
+                  </button>
+                )}
+                <input value={draft} onChange={e => setDraft(e.target.value)} aria-label={whatsapp ? 'Nota interna' : 'Mensagem'}
+                  placeholder={whatsapp ? 'Nota interna para a equipe' : `Responder ${firstName || 'o lead'}…`} />
+                <button type="submit" className="btn btn-primary btn-sm" disabled={!draft.trim()}><Send size={15} /> <span className="deck-hide-sm">{whatsapp ? 'Salvar nota' : 'Enviar'}</span></button>
+              </form>
             </>
-          ) : <div style={{ padding: 24, color: 'var(--mute)' }}>Selecione um lead.</div>}
-        </div>
+          ) : <p className="deck-empty pad">Selecione uma conversa.</p>}
+        </section>
       </div>
-      {showTimeline && lead && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(28,25,23,.35)', display: 'flex', justifyContent: 'flex-end', zIndex: 60 }} onClick={() => setShowTimeline(false)}>
-          <div className="card" onClick={(e) => e.stopPropagation()} style={{ width: 'min(520px, 100%)', height: '100%', borderRadius: '16px 0 0 16px', padding: 24, overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 16 }}>
-              <div>
-                <h2 style={{ margin: 0, fontSize: 22 }}>Timeline do lead</h2>
-                <div style={{ color: 'var(--mute)', fontSize: 13 }}>{lead.name} · {lead.channel}</div>
-              </div>
-              <button className="btn btn-ghost btn-sm" onClick={() => setShowTimeline(false)}><X size={18} /></button>
-            </div>
-            <div style={{ display: 'grid', gap: 10 }}>
-              {(() => {
-                const toMin = (t) => { const m = /^([0-9]{1,2}):([0-9]{2})$/.exec(t || ''); return m ? (+m[1]) * 60 + (+m[2]) : -1; };
-                const ev = (leadEvents[lead.id] || []).map((e, i) => ({ kind: 'event', i, time: e.time || '', text: e.text, type: e.type || 'event' }));
-                const msg = (conversations[lead.id] || []).map((m, i) => ({ kind: 'msg', i, time: m.time || '', text: m.text, from: m.from }));
-                const all = [...ev, ...msg].sort((a, b) => { const ta = toMin(a.time), tb = toMin(b.time); if (ta === -1 && tb === -1) return 0; if (ta === -1) return -1; if (tb === -1) return 1; return ta - tb || (a.kind === 'event' ? -1 : 1); });
-                if (all.length === 0) return <div style={{ color: 'var(--mute)', fontSize: 14 }}>Sem atividades registradas.</div>;
-                return all.map((item, idx) => (
-                  <div key={idx} style={{ padding: 12, border: '1px solid var(--line)', borderRadius: 8, background: item.kind === 'event' ? '#FAFAF9' : '#FAFAF9' }}>
-                    <div style={{ fontSize: 12, color: 'var(--mute)', marginBottom: 4 }}>
-                      {item.kind === 'event'
-                        ? `${item.type === 'status' ? 'Status' : item.type === 'handoff' ? 'Handoff' : item.type === 'simulation' ? 'Simulação' : item.type === 'playbook' ? 'Playbook' : item.type === 'ia' ? 'IA' : 'Evento'} · ${item.time}`
-                        : `${item.from === 'client' ? 'Cliente' : item.from === 'ia' ? 'LeadIA' : 'Consultor'} · ${item.time}`}
-                    </div>
-                    <div style={{ fontSize: 14 }}>{item.text}</div>
-                  </div>
-                ));
-              })()}
-            </div>
-          </div>
-        </div>
-      )}
 
-      <dialog ref={followUpDialog} aria-labelledby="follow-up-dialog-title" className="card" style={{ width: 'min(420px, calc(100% - 32px))', padding: 22, color: 'var(--ink)' }}>
-        <form onSubmit={submitFollowUp} style={{ display: 'grid', gap: 14 }}>
-          <h2 id="follow-up-dialog-title" style={{ margin: 0 }}>Agendar follow-up</h2>
-          <label style={{ display: 'grid', gap: 6 }}>Data do retorno
+      <Modal open={panel === 'acoes' && !!lead} onClose={() => setPanel(null)} tone="deck" size="lg" icon={SlidersHorizontal}
+        title="Ações da conversa" subtitle={lead ? `${lead.name} · ${lead.channel}` : ''}>
+        {lead && <>
+          <dl className="deck-sheet">
+            <div><dt>Status</dt><dd>{lead.status}</dd></div>
+            <div><dt>Interesse</dt><dd>{lead.interest || '—'}</dd></div>
+            <div><dt>Valor</dt><dd>R$ {Number(lead.value || 0).toLocaleString('pt-BR')}</dd></div>
+            <div><dt>Score</dt><dd>{lead.score ?? 60}</dd></div>
+            <div><dt>Próxima ação</dt><dd>{lead.nextAction || '—'}</dd></div>
+          </dl>
+          {user?.mode === 'real' && members.length > 0 && <label className="deck-field">Responsável
+            <select aria-label="Responsável pela conversa" value={lead.ownerId || ''} disabled={!canAssign || Boolean(pendingWrites)}
+              onChange={event => assignLead(lead.id, event.target.value || null)}>
+              <option value="">Sem responsável</option>
+              {lead.ownerId && !assignees.some(member => member.id === lead.ownerId) && <option value={lead.ownerId} disabled>{owner?.name || 'Responsável indisponível'}</option>}
+              {assignees.map(member => <option key={member.id} value={member.id}>{member.name}</option>)}
+            </select>
+          </label>}
+          <div className="deck-tiles">
+            {actions.map(({ id, label, hint, icon: Icon, onClick, disabled }) => (
+              <button key={id} type="button" className="deck-tile" onClick={onClick} disabled={disabled}>
+                <Icon size={18} aria-hidden="true" /><strong>{label}</strong><small>{hint}</small>
+              </button>
+            ))}
+          </div>
+        </>}
+      </Modal>
+
+      <Modal open={panel === 'ia' && !!lead} onClose={() => setPanel(null)} tone="deck" size="lg" icon={Sparkles}
+        title="Assistente de resposta" subtitle={ai ? 'Gera com o modelo configurado em Configurações.' : 'Sem modelo configurado: usa respostas prontas.'}>
+        <div className="deck-label">Playbooks</div>
+        <div className="deck-tiles">
+          {PLAYBOOK_OPTIONS.map(([key, label, hint]) => (
+            <button key={key} type="button" className="deck-tile" disabled={busy} onClick={() => { setPanel(null); sendAI(undefined, key); }}>
+              <strong>{label}</strong><small>{hint}</small>
+            </button>
+          ))}
+        </div>
+        <div className="deck-label">Sugestões para a última mensagem</div>
+        <div className="deck-suggestions">
+          {suggestions.slice(0, 3).map((s, i) => (
+            <button key={i} type="button" className="deck-suggestion" disabled={busy} onClick={() => { setPanel(null); sendAI(s); }}>{s}</button>
+          ))}
+        </div>
+        <div className="deck-row-end">
+          <button type="button" className="btn btn-outline btn-sm" onClick={() => { setDraft(suggestions[0] || ''); setPanel(null); }}>Colocar no campo para editar</button>
+          <button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={() => { setPanel(null); sendAI(); }}><Sparkles size={14} /> Responder com IA</button>
+        </div>
+      </Modal>
+
+      <Modal open={showTimeline && !!lead} onClose={() => setShowTimeline(false)} tone="deck" side="right" icon={History}
+        title="Timeline" subtitle={lead ? `${lead.name} · ${lead.channel}` : ''}>
+        {lead && (() => {
+          const toMin = (t) => { const m = /^([0-9]{1,2}):([0-9]{2})$/.exec(t || ''); return m ? (+m[1]) * 60 + (+m[2]) : -1; };
+          const ev = (leadEvents[lead.id] || []).map((e, i) => ({ kind: 'event', i, time: e.time || '', text: e.text, type: e.type || 'event' }));
+          const msg = (conversations[lead.id] || []).map((m, i) => ({ kind: 'msg', i, time: m.time || '', text: m.text, from: m.from }));
+          const all = [...ev, ...msg].sort((a, b) => { const ta = toMin(a.time), tb = toMin(b.time); if (ta === -1 && tb === -1) return 0; if (ta === -1) return -1; if (tb === -1) return 1; return ta - tb || (a.kind === 'event' ? -1 : 1); });
+          if (all.length === 0) return <p className="deck-empty">Sem atividades registradas.</p>;
+          return <ol className="deck-timeline">{all.map((item, idx) => (
+            <li key={idx} className={item.kind}>
+              <span className="deck-timeline-meta">{item.kind === 'event'
+                ? `${EVENT_LABEL[item.type] || 'Evento'} · ${item.time}`
+                : `${item.from === 'client' ? 'Cliente' : item.from === 'ia' ? 'LeadIA' : 'Consultor'} · ${item.time}`}</span>
+              <span>{item.text}</span>
+            </li>
+          ))}</ol>;
+        })()}
+      </Modal>
+
+      <Modal open={followUpOpen} onClose={() => setFollowUpOpen(false)} tone="deck" size="sm" icon={CalendarPlus} title="Agendar retorno">
+        <form onSubmit={submitFollowUp} className="deck-form">
+          <label className="deck-field">Data do retorno
             <input type="date" required min={followUpForm.min} value={followUpForm.date} onChange={event => setFollowUpForm({ ...followUpForm, date: event.target.value })} />
           </label>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button type="submit" className="btn btn-primary" disabled={Boolean(pendingWrites)}>Salvar retorno</button>
-            <button type="button" className="btn btn-outline" onClick={() => followUpDialog.current?.close()}>Cancelar</button>
+          <div className="deck-row-end">
+            <button type="button" className="btn btn-outline btn-sm" onClick={() => setFollowUpOpen(false)}>Cancelar</button>
+            <button type="submit" className="btn btn-primary btn-sm" disabled={Boolean(pendingWrites)}>Salvar retorno</button>
           </div>
         </form>
-      </dialog>
+      </Modal>
 
-      {showProposal && lead && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(28,25,23,.35)', display: 'grid', placeItems: 'center', padding: 20, zIndex: 60 }} onClick={() => setShowProposal(false)}>
-          <div className="card" onClick={(e) => e.stopPropagation()} style={{ width: 'min(680px, 100%)', padding: 24 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 12 }}>
-              <h2 style={{ margin: 0, fontSize: 22 }}><FileText size={18} style={{ verticalAlign: 'middle' }} /> Proposta / resumo</h2>
-              <button className="btn btn-ghost btn-sm" onClick={() => setShowProposal(false)}><X size={18} /></button>
-            </div>
-            <textarea readOnly value={buildProposalText()} style={{ width: '100%', minHeight: 260, resize: 'vertical', fontFamily: 'inherit' }} />
-            <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-              <button className="btn btn-primary btn-sm" onClick={() => { navigator.clipboard?.writeText(buildProposalText()); recordEvent(lead.id, { type: 'event', text: 'Proposta/resumo copiado' }); }}><Copy size={14} /> Copiar texto</button>
-              <button className="btn btn-outline btn-sm" onClick={() => { const blob = new Blob([buildProposalText()], { type: 'text/plain;charset=utf-8' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `proposta-${lead.name.replace(/\s+/g,'-').toLowerCase()}.txt`; a.click(); URL.revokeObjectURL(a.href); recordEvent(lead.id, { type: 'event', text: 'Proposta exportada (.txt)' }); }}>Exportar .txt</button>
-            </div>
-          </div>
-        </div>
-      )}
-
+      <Modal open={showProposal && !!lead} onClose={() => setShowProposal(false)} tone="deck" size="lg" icon={FileText} title="Proposta"
+        footer={lead && <>
+          <button className="btn btn-outline btn-sm" onClick={() => { const blob = new Blob([buildProposalText()], { type: 'text/plain;charset=utf-8' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `proposta-${lead.name.replace(/\s+/g, '-').toLowerCase()}.txt`; a.click(); URL.revokeObjectURL(a.href); recordEvent(lead.id, { type: 'event', text: 'Proposta exportada (.txt)' }); }}>Exportar .txt</button>
+          <button className="btn btn-primary btn-sm" onClick={() => { navigator.clipboard?.writeText(buildProposalText()); recordEvent(lead.id, { type: 'event', text: 'Proposta/resumo copiado' }); }}><Copy size={14} /> Copiar texto</button>
+        </>}>
+        <textarea readOnly aria-label="Texto da proposta" value={buildProposalText()} className="deck-proposal" />
+      </Modal>
     </div>
   );
 }
