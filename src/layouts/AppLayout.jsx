@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, MessageSquare, BarChart3, LayoutGrid, Bell, Shield, Settings, LogOut, Menu, X, Sun, Bot } from 'lucide-react';
+import { LayoutDashboard, Users, MessageSquare, BarChart3, LayoutGrid, Bell, Shield, Settings, LogOut, Menu, X, Sun, Bot, Plug } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Tour from '../components/Tour';
 import './AppLayout.css';
@@ -14,6 +14,7 @@ const nav = [
   { to: '/app/analytics', icon: BarChart3, label: 'Analytics' },
   { to: '/app/alertas', icon: Bell, label: 'Alertas' },
   { to: '/app/agentes', icon: Bot, label: 'Agentes' },
+  { to: '/app/integracoes', icon: Plug, label: 'Integrações' },
   { to: '/app/arquitetura', icon: Shield, label: 'Arquitetura' },
   { to: '/app/configuracoes', icon: Settings, label: 'Configurações' },
 ];

@@ -54,6 +54,8 @@ Para o contexto da organização, o Compose aplica a migração 003_org_context.
 
 Para os agentes, o Compose aplica a migração 004_agents.sql. Ela cria agents (rascunho por organização) e agent_revisions (revisões publicadas, imutáveis, com cópia do contexto do negócio). Só owner ou admin editam, publicam e restauram; restaurar cria uma revisão nova e não apaga o histórico. Publicar não liga envio automático em canal. Depois do redeploy do DB Compose, abra Agentes como owner ou admin, salve o rascunho, publique e confira a revisão na lista.
 
+Para as integrações de anúncios, o Compose aplica a migração 005_ad_integrations.sql. Ela cria ad_integrations com os identificadores públicos de Meta Ads, Pixel, Google Ads, GA4, GTM e TikTok, validados no banco. Não guarda tokens nem segredos. Pelo app, owner ou admin só cadastram (status aguardando credenciais) ou desligam; marcar como conectado ou registrar erro fica para o servidor de OAuth, que ainda depende das credenciais de app de cada plataforma.
+
 ## Validação de SQL
 
 Usar somente PostgreSQL descartável, banco terminado em `_test`:
