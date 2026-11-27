@@ -30,6 +30,8 @@ export function onRequest({ request, env }) {
     method: 'POST',
     headers,
     body: request.body,
-    redirect: 'error',
-  }).catch(() => unavailable(502));
+    redirect: 'manual',
+  }).then(response => (
+    response.status >= 300 && response.status < 400 ? unavailable(502) : response
+  )).catch(() => unavailable(502));
 }
