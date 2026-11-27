@@ -9,6 +9,41 @@ const sessionTtlMs = 60_000;
 const rateLimit = 20;
 const rateWindowMs = 60_000;
 const anthropicUrl = 'https://api.anthropic.com/v1/messages';
+const stringField = { type: 'string' };
+const agentConfigFields = {
+  purpose: stringField,
+  tone: stringField,
+  qualificationQuestions: { type: 'array', items: stringField },
+  excludedTopics: { type: 'array', items: stringField },
+  routingRules: {
+    type: 'array',
+    items: {
+      type: 'object',
+      properties: {
+        when: stringField,
+        action: { type: 'string', enum: ['reply', 'handoff', 'qualify', 'decline'] },
+        reply: stringField,
+      },
+      required: ['when', 'action', 'reply'],
+      additionalProperties: false,
+    },
+  },
+  allowedActions: {
+    type: 'array',
+    items: { type: 'string', enum: ['reply', 'qualify', 'create_followup', 'handoff'] },
+  },
+  fallback: stringField,
+  afterHoursMessage: stringField,
+};
+const agentConfigFormat = {
+  type: 'json_schema',
+  schema: {
+    type: 'object',
+    properties: agentConfigFields,
+    required: Object.keys(agentConfigFields),
+    additionalProperties: false,
+  },
+};
 
 function json(response, status, body) {
   response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
@@ -67,6 +102,8 @@ export function normalizeRequest(body) {
   const system = body.system ?? '';
   if (typeof system !== 'string' || system.length > 4000) return null;
   const maxTokens = body.maxTokens ?? 300;
+  const responseFormat = body.responseFormat;
+  if (responseFormat !== undefined && responseFormat !== 'agent_config') return null;
   if (!Number.isInteger(maxTokens) || maxTokens < 1 || maxTokens > 1200) return null;
   if (!Array.isArray(body.messages) || body.messages.length < 1 || body.messages.length > 30) return null;
 
@@ -87,13 +124,15 @@ export function normalizeRequest(body) {
   if (!messages.length || messages.at(-1).role !== 'user') {
     messages.push({ role: 'user', content: 'Gere a próxima mensagem.' });
   }
-  return { system: system.trim(), maxTokens, messages };
+  return { system: system.trim(), maxTokens, messages, ...(responseFormat && { responseFormat }) };
 }
 
 /** Chama a Messages API da Anthropic. Sem temperature: o modelo Haiku 5.5 rejeita o campo. */
-export async function callClaude({ system, maxTokens, messages }, { claudeKey, claudeModel, fetch: fetchImpl = fetch }) {
+export async function callClaude({ system, maxTokens, messages, responseFormat }, { claudeKey, claudeModel, fetch: fetchImpl = fetch }) {
   const payload = { model: claudeModel, max_tokens: maxTokens, messages };
   if (system) payload.system = system;
+  if (claudeModel === 'claude-haiku-5-5') payload.thinking = { type: 'disabled' };
+  if (responseFormat === 'agent_config') payload.output_config = { format: agentConfigFormat };
   const response = await fetchImpl(anthropicUrl, {
     method: 'POST',
     headers: { 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
@@ -103,6 +142,9 @@ export async function callClaude({ system, maxTokens, messages }, { claudeKey, c
   if (!response.ok) throw new Error(`anthropic_${response.status}`);
   const data = await response.json();
   if (data?.stop_reason === 'refusal') throw new Error('anthropic_refusal');
+  if (responseFormat === 'agent_config' && data?.stop_reason === 'max_tokens') {
+    throw new Error('anthropic_agent_config_truncated');
+  }
   const text = (Array.isArray(data?.content) ? data.content : [])
     .filter(block => block?.type === 'text' && typeof block.text === 'string')
     .map(block => block.text)
