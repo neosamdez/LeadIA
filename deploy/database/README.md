@@ -50,6 +50,8 @@ gateway e então publicar frontend. O CI/CD do frontend não substitui esse pass
 
 Para a atribuição de conversas, o Compose aplica também a migração 002_lead_assignment.sql. Ao aplicar a migração, o banco disponibiliza list_lead_assignees. O controle de atribuição aparece no frontend depois que essa função estiver disponível. Em uma organização de teste, atribua um lead a um membro, recarregue a conversa e confira o registro na Timeline. A alteração fica vinculada à organização do lead.
 
+Para o contexto da organização, o Compose aplica a migração 003_org_context.sql. Ela adiciona a org_settings a proposta de valor, o público, as ofertas, o idioma, o fuso, o horário, as restrições, quem assume conversas e a prioridade do mês. O banco valida o fuso e o responsável e registra quem alterou o contexto. Antes de aplicar, faça backup. Depois do redeploy do DB Compose, abra Configurações > Contexto do negócio como owner ou admin, salve, recarregue e confira a prioridade na tela Hoje. Enquanto a 003 não estiver aplicada, o frontend mostra o aviso de migração pendente no lugar do formulário.
+
 ## Validação de SQL
 
 Usar somente PostgreSQL descartável, banco terminado em `_test`:

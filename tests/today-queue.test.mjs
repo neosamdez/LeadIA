@@ -48,3 +48,15 @@ test('sugere leads em aberto sem retorno pendente, por pontuação', () => {
   const onlyDone = followUps.filter(task => task.done);
   assert.deepEqual(leadsWithoutFollowUp({ followUps: onlyDone, leads }).map(lead => lead.id), ['b', 'd', 'a']);
 });
+
+test('contexto: mapeia colunas, detecta banco sem migração e mede a prioridade', async () => {
+  const { PRIORITIES, appContextToDb, dbContextToApp, missingContext } = await import('../src/lib/orgContext.js');
+  assert.equal(dbContextToApp({ company_name: 'X' }), null);
+  const context = dbContextToApp({ priority: 'clear_overdue_followups', audience: 'PMEs', timezone: 'America/Fortaleza', language: 'pt-BR', context_updated_by: 'u1' });
+  assert.equal(context.audience, 'PMEs');
+  assert.equal(context.updatedBy, 'u1');
+  assert.deepEqual(missingContext(context), ['proposta de valor', 'ofertas autorizadas', 'horário de atendimento']);
+  assert.deepEqual(appContextToDb({ audience: '  ', handoffOwnerId: '', timezone: 'America/Recife' }), { audience: null, handoff_owner_id: null, timezone: 'America/Recife' });
+  assert.equal(PRIORITIES.clear_overdue_followups.measure({ followUps, leads, members, now }), 1);
+  assert.equal(PRIORITIES.follow_up_new_leads.measure({ followUps, leads, members, now }), 1);
+});

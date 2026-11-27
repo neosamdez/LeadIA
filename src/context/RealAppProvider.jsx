@@ -13,7 +13,7 @@ import { appLeadToDb, dbLeadToApp, dbMessageToApp, dbFollowUpToApp, appFollowUpT
 const empty = {
   members: [], leads: [], conversations: {}, leadEvents: {}, followUps: [], dismissedAlerts: [],
   goals: { monthlyLeads: 0, conversionRate: 0, revenue: 0, responseMinutes: 0 },
-  settings: { companyName: '', segment: '', tone: '', autoReply: false, followUp: true, useNvidiaApi: false, nvidiaApiKey: '' },
+  settings: { companyName: '', segment: '', tone: '', autoReply: false, followUp: true, useNvidiaApi: false, nvidiaApiKey: '', context: null },
   tour: { active: false, step: 0 }, activePersonaId: null,
 };
 const noDemoAction = () => {};
@@ -170,6 +170,7 @@ export default function RealAppProvider({ children }) {
     completeFollowUp: id => mutate(() => followUpsService.updateFollowUp(id, { status: 'done' })),
     updateGoals: patch => mutate(orgId => goalsService.upsertGoals(orgId, { ...data.goals, ...patch })),
     updateSettings: patch => mutate(orgId => settingsService.upsertOrgSettings(orgId, patch)),
+    updateContext: patch => mutate(orgId => settingsService.updateOrgContext(orgId, patch)),
     dismissAlert: id => setData(s => ({ ...s, dismissedAlerts: [...s.dismissedAlerts, id] })),
     clearDismissedAlerts: () => setData(s => ({ ...s, dismissedAlerts: [] })),
     applyPersona: noDemoAction, resetDemo: noDemoAction, simulateScenario: noDemoAction,

@@ -36,3 +36,10 @@
 @media (prefers-reduced-motion: reduce) {
   .hoje-bar span { transition: none; }
 }
+
+.hoje-priority { display: flex; gap: 12px; align-items: flex-start; padding: 18px 20px; margin-bottom: 16px; border-color: rgba(255, 90, 82, .3); }
+.hoje-priority svg { color: var(--acc); flex: none; margin-top: 2px; }
+.hoje-priority h2 { margin: 0 0 4px; font-size: 16px; }
+.hoje-priority p { margin: 0; font-size: 14px; color: var(--mute); }
+.hoje-priority p + p { margin-top: 6px; }
+.hoje-priority strong { color: var(--ink); font-size: 16px; }

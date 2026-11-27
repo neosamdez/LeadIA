@@ -1,4 +1,5 @@
 import { followUpDueDate } from './followUpDates';
+import { dbContextToApp } from './orgContext';
 
 export function dbLeadToApp(row) {
   if (!row) return row;
@@ -113,6 +114,7 @@ export function dbSettingsToApp(row) {
     useNvidiaApi: row.use_nvidia_api ?? true,
     nvidiaModel: row.nvidia_model ?? '',
     nvidiaProxyUrl: row.nvidia_proxy_url ?? '',
+    context: dbContextToApp(row),
   };
 }
 

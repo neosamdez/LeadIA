@@ -5,5 +5,5 @@ case "${TEST_DATABASE_URL%%\?*}" in */*_test) ;; *) echo 'Banco de teste deve te
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 \
   -f tests/bootstrap.sql -f supabase/schema.sql -f supabase/schema.sql -f tests/database.sql \
   -f supabase/migrations/001_whatsapp.sql -f supabase/migrations/001_whatsapp.sql -f tests/whatsapp.sql \
-  -f supabase/migrations/002_lead_assignment.sql -f supabase/migrations/002_lead_assignment.sql -f tests/lead_assignment.sql -f tests/analytics.sql
-node --test tests/whatsapp.test.mjs tests/analytics-period.test.mjs
+  -f supabase/migrations/002_lead_assignment.sql -f supabase/migrations/002_lead_assignment.sql -f tests/lead_assignment.sql -f tests/analytics.sql \n  -f supabase/migrations/003_org_context.sql -f supabase/migrations/003_org_context.sql -f tests/org_context.sql
+node --test tests/whatsapp.test.mjs tests/analytics-period.test.mjs tests/today-queue.test.mjs
