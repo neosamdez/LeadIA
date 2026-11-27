@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Save, RotateCcw, Building2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { personas } from '../data/personas';
+import OrgContextForm from '../components/OrgContextForm';
 
 export default function Settings() {
   const { settings, updateSettings, resetDemo, user, applyPersona, activePersonaId } = useApp();
@@ -116,6 +117,7 @@ export default function Settings() {
           </div>
         </div>}
       </div>
+      <div style={{ marginTop: 16 }}><OrgContextForm key={settings.context ? 'carregado' : 'vazio'} /></div>
       <style>{`@media (max-width: 900px){ .app-main [style*="1.2fr"]{grid-template-columns:1fr !important} }`}</style>
     </div>
   );

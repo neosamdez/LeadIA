@@ -5,6 +5,7 @@ import { seedConversations, seedLeads } from '../data/mockData';
 import { personas, defaultPersonaId } from '../data/personas';
 import { isRealMode } from '../lib/config';
 import { followUpDueDate } from '../lib/followUpDates';
+import { EMPTY_CONTEXT } from '../lib/orgContext';
 
 const STORAGE_KEY = 'leadia_demo_v1';
 
@@ -163,6 +164,10 @@ function DemoAppProvider({ children }) {
     },
     updateSettings: (patch) => {
       setState((s) => ({ ...s, settings: { ...s.settings, ...patch } }));
+    },
+    updateContext: (patch) => {
+      setState((s) => ({ ...s, settings: { ...s.settings, context: { ...EMPTY_CONTEXT, ...s.settings.context, ...patch, updatedAt: new Date().toISOString(), updatedBy: s.user?.id || '' } } }));
+      return true;
     },
     applyPersona: (personaId) => setState((s) => {
       if (s.user?.mode === 'real') return s;

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarPlus, CheckCircle2, Clock, MessageSquare, Sun, UserRound } from 'lucide-react';
+import { CalendarPlus, CheckCircle2, Clock, MessageSquare, Sun, Target, UserRound } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatFollowUpDate } from '../lib/followUpDates';
+import { PRIORITIES, missingContext } from '../lib/orgContext';
 import { buildTodayQueue, leadsWithoutFollowUp, queueReason, todayProgress } from '../lib/todayQueue';
 import './Hoje.css';
 
@@ -10,7 +11,7 @@ const QUEUE_SIZE = 4;
 const PERIOD_BADGE = { overdue: ['red', 'Atrasado'], today: ['blue', 'Vence hoje'], upcoming: ['', 'Próximo'], unscheduled: ['', 'Sem prazo'] };
 
 export default function Hoje() {
-  const { user, leads, followUps, members = [], completeFollowUp, addFollowUp, pendingWrites } = useApp();
+  const { user, leads, followUps, members = [], settings, completeFollowUp, addFollowUp, pendingWrites } = useApp();
   const real = user?.mode === 'real';
   const viewer = members.some(member => member.id === user?.id && member.role === 'viewer');
   const [scope, setScope] = useState('all');
@@ -28,6 +29,10 @@ export default function Hoje() {
   const [next, ...rest] = queue;
   const overdue = queue.filter(task => task.period === 'overdue').length;
   const busy = Boolean(pendingWrites);
+  const context = settings?.context;
+  const priority = PRIORITIES[context?.priority];
+  const priorityValue = priority ? priority.measure({ followUps, leads, members, now, ownerId }) : null;
+  const contextGaps = missingContext(context);
 
   async function complete(task) {
     setFeedback('');
@@ -58,6 +63,25 @@ export default function Hoje() {
           </div>
         )}
       </div>
+
+      {context && (priority ? (
+        <section className="card hoje-priority" aria-labelledby="hoje-priority-title">
+          <Target size={20} aria-hidden="true" />
+          <div>
+            <h2 id="hoje-priority-title">Prioridade do mês: {priority.label}</h2>
+            <p>{priority.metric}{ownerId ? ' atribuídos a você' : ''}: <strong>{priorityValue}</strong>. {priority.help}</p>
+            {contextGaps.length > 0 && <p>Contexto incompleto: {contextGaps.join(', ')}. <Link to="/app/configuracoes#contexto">Completar</Link></p>}
+          </div>
+        </section>
+      ) : (
+        <section className="card hoje-priority" aria-labelledby="hoje-priority-title">
+          <Target size={20} aria-hidden="true" />
+          <div>
+            <h2 id="hoje-priority-title">Defina a prioridade do mês</h2>
+            <p>Escolha um objetivo medido pelo CRM e registre o contexto do negócio. <Link to="/app/configuracoes#contexto">Abrir contexto</Link></p>
+          </div>
+        </section>
+      ))}
 
       <section className="card hoje-progress" aria-labelledby="hoje-progress-title">
         <div>
