@@ -1,3 +1,4 @@
+import { agentPrompt, parseAgentJson } from '../lib/agentPresets.js';
 const NVIDIA_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
 
 export function getNvidiaApiKey(settings) {
@@ -111,4 +112,11 @@ export async function generateNvidiaClientMessage({ lead, conversations, setting
     `Não use prefixos como "Cliente:". Não faça papel de vendedor. Apenas a mensagem do cliente.`,
   ].join(' ');
   return callNvidia([{ role: 'system', content: system }, ...history], settings, signal, 120);
+}
+
+// Gera a configuração do agente a partir do objetivo e do contexto do negócio.
+// Devolve só campos de comportamento já validados; quem chama decide aplicar no rascunho.
+export async function generateAgentConfig({ objective, description, context, settings, signal }) {
+  const text = await callNvidia(agentPrompt(objective, description, context), settings, signal, 900);
+  return parseAgentJson(text);
 }

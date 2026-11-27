@@ -1,0 +1,36 @@
+.modal {
+  padding: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--surf); color: var(--ink);
+  width: min(560px, calc(100vw - 24px)); max-height: min(86dvh, 860px); box-shadow: 0 24px 60px rgba(28, 25, 23, .22);
+}
+.modal-sm { width: min(420px, calc(100vw - 24px)); }
+.modal-lg { width: min(760px, calc(100vw - 24px)); }
+.modal-xl { width: min(980px, calc(100vw - 24px)); }
+.modal::backdrop { background: rgba(28, 25, 23, .42); backdrop-filter: blur(2px); }
+.modal[open] { animation: modal-in .16s ease-out; }
+@keyframes modal-in { from { opacity: 0; transform: translateY(8px) scale(.99); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .modal[open] { animation: none; } }
+
+.modal-box { display: flex; flex-direction: column; max-height: inherit; }
+.modal-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; padding: 18px 20px 12px; border-bottom: 1px solid var(--line); }
+.modal-titles h2 { margin: 0; font-size: 17px; font-weight: 650; display: flex; gap: 8px; align-items: center; }
+.modal-titles p { margin: 3px 0 0; font-size: 13px; color: var(--mute); }
+.modal-close { border: 0; background: transparent; color: var(--mute); padding: 6px; border-radius: 6px; cursor: pointer; display: grid; place-items: center; }
+.modal-close:hover { background: var(--surf-2); color: var(--ink); }
+.modal-body { padding: 16px 20px 20px; overflow-y: auto; min-height: 0; }
+.modal-foot { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; padding: 12px 20px; border-top: 1px solid var(--line); }
+
+/* Gaveta lateral */
+.modal-drawer { margin: 0 0 0 auto; height: 100dvh; max-height: 100dvh; border-radius: 12px 0 0 12px; width: min(520px, 100vw); }
+.modal-drawer .modal-box { height: 100%; }
+.modal-drawer[open] { animation: drawer-in .2s ease-out; }
+@keyframes drawer-in { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Tema escuro da tela de Conversas */
+.modal-deck {
+  --surf: #0E1726; --surf-2: #132036; --line: #1F2E47; --ink: #E6EDF7; --mute: #8FA3BF;
+  background: #0B1320; color: var(--ink); border-color: #23395B;
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, .08), 0 30px 80px rgba(0, 0, 0, .6);
+}
+.modal-deck::backdrop { background: rgba(2, 6, 14, .66); }
+.modal-deck .modal-titles h2 { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #7DD3FC; }
+.modal-deck input, .modal-deck select, .modal-deck textarea { background: #0E1726; color: var(--ink); border-color: #23395B; }

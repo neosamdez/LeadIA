@@ -27,7 +27,7 @@ export default function Settings() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr .8fr', gap: 16 }}>
+      <div className="settings-grid">
         <form className="card" onSubmit={save} style={{ padding: 24, display: 'grid', gap: 18, alignContent: 'start', alignSelf: 'start' }}>
           <h2 style={{ margin: 0, fontSize: 20 }}>Perfil da empresa</h2>
           <label style={{ display: 'grid', gap: 6, fontSize: 14, fontWeight: 600 }}>Nome da empresa
