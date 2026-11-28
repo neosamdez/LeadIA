@@ -126,7 +126,7 @@ test('envio Evolution usa API key e body de texto sem repetir em timeout', async
     });
   assert.equal(calls[0][0], 'https://evolution.example/message/sendText/leadia-test');
   assert.equal(calls[0][1].headers.apikey, 'server-only');
-  assert.deepEqual(JSON.parse(calls[0][1].body), { number: job.recipient, text: 'Resposta de teste' });
+  assert.deepEqual(JSON.parse(calls[0][1].body), { number: job.recipient, textMessage: { text: 'Resposta de teste' } });
   assert.deepEqual(result, { delivery: 'accepted', id: 'evolution:leadia-test:BAE5OUT' });
 });
 

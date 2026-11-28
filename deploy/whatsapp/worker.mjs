@@ -126,7 +126,7 @@ export async function deliverEvolution(job, reply, { evolutionApiUrl, evolutionA
       method: 'POST',
       headers: { apikey: evolutionApiKey, 'content-type': 'application/json' },
       signal: AbortSignal.timeout(8000),
-      body: JSON.stringify({ number: job.recipient, text: reply }),
+      body: JSON.stringify({ number: job.recipient, textMessage: { text: reply } }),
     });
     if (response.status >= 400 && response.status < 500) return { delivery: 'failed' };
     if (!response.ok) return { delivery: 'uncertain' };
