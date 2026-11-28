@@ -91,36 +91,39 @@ export function createWebhook({ verifyToken, appSecret, phoneNumberId, recipient
         if (!/^[a-zA-Z0-9_-]{1,64}$/.test(instance ?? '')) return reply(response, 400);
 
         if (event === 'MESSAGES_UPSERT') {
-          const data = payload?.data;
-          const key = data?.key;
-          const remoteJid = typeof key?.remoteJid === 'string' && key.remoteJid.endsWith('@lid')
-            ? key.remoteJidAlt : key?.remoteJid;
-          const from = typeof remoteJid === 'string' && remoteJid.endsWith('@s.whatsapp.net')
-            ? remoteJid.slice(0, -'@s.whatsapp.net'.length) : remoteJid;
-          const content = legacyAuth ? data?.message?.conversation ?? data?.message?.extendedTextMessage?.text
-            : evolutionContent(data?.message);
-          const providerId = key?.id;
-          const rawTimestamp = data?.messageTimestamp;
-          const timestamp = Number(rawTimestamp);
-          if (key?.fromMe === false && phone.test(from ?? '') && typeof providerId === 'string'
-            && providerId.length > 0 && providerId.length <= 400 && typeof content === 'string'
-            && content.trim() && content.length <= 10000 && Number.isFinite(timestamp) && timestamp > 0) {
-            const name = typeof data.pushName === 'string' ? data.pushName.slice(0, 160) : null;
-            const id = `evolution:${instance}:${providerId}`;
-            const result = legacyAuth
-              ? await rpc('whatsapp_ingest', { p_phone_id: instance, p_from: from, p_name: name,
-                p_message_id: id, p_content: content.trim(), p_received_at: new Date(timestamp * 1000).toISOString() })
-              : await evolutionRpc('whatsapp_ingest_evolution', { p_instance: instance, p_webhook_token: webhookToken,
-                p_from: from, p_name: name, p_message_id: id, p_content: content.trim(),
-                p_received_at: new Date(timestamp * 1000).toISOString() });
-            log(JSON.stringify({ event: 'evolution_inbound', id: id.slice(-8), result }));
+          const messages = Array.isArray(payload.data) ? payload.data : [payload.data];
+          for (const data of messages) {
+            const key = data?.key;
+            const remoteJid = typeof key?.remoteJid === 'string' && key.remoteJid.endsWith('@lid')
+              ? key.remoteJidAlt : key?.remoteJid;
+            const from = typeof remoteJid === 'string' && remoteJid.endsWith('@s.whatsapp.net')
+              ? remoteJid.slice(0, -'@s.whatsapp.net'.length) : remoteJid;
+            const content = legacyAuth ? data?.message?.conversation ?? data?.message?.extendedTextMessage?.text
+              : evolutionContent(data?.message);
+            const providerId = key?.id;
+            const rawTimestamp = data?.messageTimestamp;
+            const timestamp = Number(rawTimestamp);
+            if (key?.fromMe === false && phone.test(from ?? '') && typeof providerId === 'string'
+              && providerId.length > 0 && providerId.length <= 400 && typeof content === 'string'
+              && content.trim() && content.length <= 10000 && Number.isFinite(timestamp) && timestamp > 0 && timestamp <= 8640000000000) {
+              const name = typeof data.pushName === 'string' ? data.pushName.slice(0, 160) : null;
+              const id = `evolution:${instance}:${providerId}`;
+              const result = legacyAuth
+                ? await rpc('whatsapp_ingest', { p_phone_id: instance, p_from: from, p_name: name,
+                  p_message_id: id, p_content: content.trim(), p_received_at: new Date(timestamp * 1000).toISOString() })
+                : await evolutionRpc('whatsapp_ingest_evolution', { p_instance: instance, p_webhook_token: webhookToken,
+                  p_from: from, p_name: name, p_message_id: id, p_content: content.trim(),
+                  p_received_at: new Date(timestamp * 1000).toISOString() });
+              log(JSON.stringify({ event: 'evolution_inbound', id: id.slice(-8), result }));
+            }
           }
         } else if (legacyAuth && event === 'MESSAGES_UPDATE') {
           const updates = Array.isArray(payload.data) ? payload.data : [payload.data];
           const states = new Map([['SERVER_ACK', 'sent'], ['DELIVERY_ACK', 'delivered'], ['READ', 'read'],
             ['PLAYED', 'read'], ['ERROR', 'failed'], ['1', 'sent'], ['2', 'delivered'], ['3', 'read'], ['4', 'read'], ['5', 'failed']]);
           for (const update of updates) {
-            const providerId = update?.key?.id;
+            if (update?.fromMe === false || update?.key?.fromMe === false) continue;
+            const providerId = update?.key?.id ?? update?.keyId;
             const delivery = states.get(String(update?.update?.status ?? update?.status ?? '').toUpperCase());
             if (!delivery || typeof providerId !== 'string' || !providerId || providerId.length > 400) continue;
             const id = `evolution:${instance}:${providerId}`;

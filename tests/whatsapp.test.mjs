@@ -110,6 +110,11 @@ test('webhook Evolution valida segredo por instância e normaliza mensagens rece
     key: { id: 'BAE5OUT' }, update: { status: 3 },
   } })).status, 200);
   assert.equal(calls.length, 1);
+  const items = ['BATCH1', 'BATCH2'].map(id => ({ ...payload.data, key: { ...payload.data.key, id } }));
+  const ownMessage = { ...payload.data, key: { ...payload.data.key, fromMe: true, id: 'OWN' } };
+  assert.equal((await send({ ...payload, data: [items[0], ownMessage, items[1]] })).status, 200);
+  assert.deepEqual(calls.slice(1).map(([, args]) => args.p_message_id),
+    ['evolution:leadia-test:BATCH1', 'evolution:leadia-test:BATCH2']);
   assert.ok(logs.some(entry => entry.event === 'evolution_webhook_rejected'));
 });
 
