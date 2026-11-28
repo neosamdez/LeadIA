@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link2, LoaderCircle, RefreshCw, Unplug } from 'lucide-react';
-import { connectWhatsapp, disconnectWhatsapp, getWhatsappStatus } from '../services/whatsapp';
+import { Link } from 'react-router-dom';
+import { connectWhatsapp, disconnectWhatsapp, getWhatsappStatus, setWhatsappAutomation } from '../services/whatsapp';
 
-export default function WhatsAppConnection({ orgId, canEdit }) {
+export default function WhatsAppConnection({ orgId, canEdit, agentPublished }) {
   const [status, setStatus] = useState({ loading: true, connected: false, state: 'close', qr: null, error: '' });
   const [busy, setBusy] = useState(false);
 
@@ -10,7 +11,7 @@ export default function WhatsAppConnection({ orgId, canEdit }) {
     if (!orgId) return;
     try {
       const next = await getWhatsappStatus(orgId);
-      setStatus({ loading: false, connected: next.connected, state: next.state, qr: null, configured: next.configured, error: '' });
+      setStatus({ ...next, loading: false, qr: null, error: '' });
     } catch (error) {
       setStatus(current => ({ ...current, loading: false, error: error.message }));
     }
@@ -20,7 +21,7 @@ export default function WhatsAppConnection({ orgId, canEdit }) {
     let active = true;
     if (!orgId) return undefined;
     getWhatsappStatus(orgId).then(next => {
-      if (active) setStatus({ loading: false, connected: next.connected, state: next.state, qr: null, configured: next.configured, error: '' });
+      if (active) setStatus({ ...next, loading: false, qr: null, error: '' });
     }).catch(error => {
       if (active) setStatus(current => ({ ...current, loading: false, error: error.message }));
     });
@@ -28,16 +29,17 @@ export default function WhatsAppConnection({ orgId, canEdit }) {
   }, [orgId]);
 
   useEffect(() => {
-    if (!status.qr || !orgId) return undefined;
+    if (!status.qr || !orgId || busy) return undefined;
+    let active = true;
     const timer = window.setInterval(async () => {
       try {
         const next = await getWhatsappStatus(orgId);
-        setStatus(current => ({ ...current, connected: next.connected, state: next.state,
+        if (active) setStatus(current => ({ ...current, ...next,
           qr: next.connected ? null : current.qr, error: '' }));
       } catch {}
     }, 6000);
-    return () => window.clearInterval(timer);
-  }, [orgId, status.qr]);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [orgId, status.qr, busy]);
 
   async function connect() {
     setBusy(true);
@@ -55,9 +57,20 @@ export default function WhatsAppConnection({ orgId, canEdit }) {
     setBusy(true);
     try {
       const result = await disconnectWhatsapp(orgId);
-      setStatus({ loading: false, connected: false, state: result.state, qr: null, configured: true, error: '' });
+      setStatus({ ...result, loading: false, automationEnabled: false, qr: null, configured: true, error: '' });
     } catch (error) { setStatus(current => ({ ...current, error: error.message })); }
     finally { setBusy(false); }
+  }
+
+  async function toggleAutomation() {
+    const enable = !status.automationEnabled;
+    setBusy(true);
+    try {
+      const result = await setWhatsappAutomation(orgId, enable);
+      setStatus(current => ({ ...current, ...result, error: '' }));
+    } catch (error) {
+      setStatus(current => ({ ...current, error: error.message }));
+    } finally { setBusy(false); }
   }
 
   return (
@@ -73,7 +86,18 @@ export default function WhatsAppConnection({ orgId, canEdit }) {
           <ol><li>Abra o WhatsApp no celular.</li><li>Acesse <b>Dispositivos conectados</b>.</li><li>Toque em <b>Conectar dispositivo</b> e leia este código.</li></ol>
           <p className="in-hint">O código expira. Se isso acontecer, gere outro.</p></div>
       </div>}
-      {!status.qr && !status.connected && <p className="in-hint">As mensagens recebidas poderão entrar na caixa de Conversas. A conexão por QR não ativa respostas automáticas.</p>}
+      {status.connected && <div className="wa-automation">
+        <div aria-live="polite">
+          <strong>Respostas automáticas {status.automationEnabled ? 'ativas' : 'desativadas'}</strong>
+          <p className="in-hint">{agentPublished
+            ? 'A versão publicada do agente responde às novas mensagens individuais. Para mídias sem texto, pede um resumo por escrito.'
+            : <>Publique o agente de atendimento em <Link to="/app/agentes">Agentes</Link> para começar.</>}</p>
+        </div>
+        {canEdit && <button type="button" className={`btn btn-sm ${status.automationEnabled ? 'btn-outline' : 'btn-primary'}`}
+          disabled={busy || (!agentPublished && !status.automationEnabled)} onClick={toggleAutomation}>
+          {status.automationEnabled ? 'Pausar respostas' : 'Ativar respostas'}
+        </button>}
+      </div>}
       {status.error && <p className="in-err" role="alert">{status.error}</p>}
       {canEdit ? <div className="wa-actions">
         {!status.connected && <button type="button" className="btn btn-primary btn-sm" disabled={busy || status.loading} onClick={connect}>

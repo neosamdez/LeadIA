@@ -11,5 +11,6 @@ psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 \
   -f supabase/migrations/002_lead_assignment.sql -f supabase/migrations/002_lead_assignment.sql -f tests/lead_assignment.sql -f tests/analytics.sql \
   -f supabase/migrations/003_org_context.sql -f supabase/migrations/003_org_context.sql -f tests/org_context.sql \
   -f supabase/migrations/004_agents.sql -f supabase/migrations/004_agents.sql -f tests/agents.sql \
-  -f supabase/migrations/005_ad_integrations.sql -f supabase/migrations/005_ad_integrations.sql -f tests/ad_integrations.sql
+  -f supabase/migrations/005_ad_integrations.sql -f supabase/migrations/005_ad_integrations.sql -f tests/ad_integrations.sql \
+  -f supabase/migrations/008_whatsapp_agent.sql -f supabase/migrations/008_whatsapp_agent.sql -f tests/whatsapp-agent.sql
 node --test tests/whatsapp.test.mjs tests/analytics-period.test.mjs tests/today-queue.test.mjs tests/agent-sim.test.mjs tests/ad-integrations.test.mjs

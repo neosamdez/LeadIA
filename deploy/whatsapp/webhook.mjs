@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { createRpc, runWorker } from './worker.mjs';
 import { createAiHandler } from './ai.mjs';
 import { createWhatsappHandler } from './whatsapp-connect.mjs';
+import { runAgentWorker } from './agent-worker.mjs';
 
 const endpoint = '/webhooks/whatsapp';
 const evolutionEndpoint = '/webhooks/evolution';
@@ -13,6 +14,19 @@ const maxBodyBytes = 1024 * 1024;
 const phone = /^[1-9][0-9]{6,14}$/;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const deliveries = new Set(['sent', 'delivered', 'read', 'failed']);
+const mediaTypes = {
+  audioMessage: 'áudio', imageMessage: 'imagem', videoMessage: 'vídeo', documentMessage: 'documento',
+  stickerMessage: 'figurinha', contactMessage: 'contato', contactsArrayMessage: 'contatos', locationMessage: 'localização',
+};
+
+function evolutionContent(message) {
+  const actual = message?.ephemeralMessage?.message ?? message?.documentWithCaptionMessage?.message ?? message;
+  const text = actual?.conversation ?? actual?.extendedTextMessage?.text
+    ?? actual?.imageMessage?.caption ?? actual?.videoMessage?.caption ?? actual?.documentMessage?.caption;
+  if (typeof text === 'string' && text.trim()) return text;
+  const media = Object.entries(mediaTypes).find(([type]) => actual?.[type])?.[1];
+  return media ? `[Mensagem recebida por ${media}. Conteúdo indisponível em texto.]` : null;
+}
 
 function matches(expected, supplied) {
   const left = Buffer.from(expected);
@@ -79,10 +93,12 @@ export function createWebhook({ verifyToken, appSecret, phoneNumberId, recipient
         if (event === 'MESSAGES_UPSERT') {
           const data = payload?.data;
           const key = data?.key;
-          const remoteJid = key?.remoteJid;
+          const remoteJid = typeof key?.remoteJid === 'string' && key.remoteJid.endsWith('@lid')
+            ? key.remoteJidAlt : key?.remoteJid;
           const from = typeof remoteJid === 'string' && remoteJid.endsWith('@s.whatsapp.net')
             ? remoteJid.slice(0, -'@s.whatsapp.net'.length) : remoteJid;
-          const content = data?.message?.conversation ?? data?.message?.extendedTextMessage?.text;
+          const content = legacyAuth ? data?.message?.conversation ?? data?.message?.extendedTextMessage?.text
+            : evolutionContent(data?.message);
           const providerId = key?.id;
           const rawTimestamp = data?.messageTimestamp;
           const timestamp = Number(rawTimestamp);
@@ -252,13 +268,16 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     return response.json();
   } : null;
   const ai = createAiHandler(config);
-  const whatsappConnect = config.evolutionEnabled && config.serviceRoleKey && config.evolutionWebhookUrl
-    ? createWhatsappHandler(config) : null;
+  const managedEvolution = Boolean(evolutionRpc && config.evolutionWebhookUrl);
+  const whatsappConnect = createWhatsappHandler({ ...config, evolutionEnabled: managedEvolution });
   const server = createWebhook({ ...config, rpc, evolutionRpc, ai, whatsappConnect });
   const stop = new AbortController();
   for (const signal of ['SIGTERM', 'SIGINT']) {
     process.once(signal, () => { stop.abort(); server.close(); });
   }
   server.listen(3000, '0.0.0.0');
-  if (workerEnabled) await runWorker(rpc, config, stop.signal);
+  await Promise.all([
+    workerEnabled && runWorker(rpc, config, stop.signal),
+    managedEvolution && config.claudeKey && runAgentWorker(evolutionRpc, config, stop.signal),
+  ]);
 }

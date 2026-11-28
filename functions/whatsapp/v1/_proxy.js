@@ -1,7 +1,7 @@
 const path = '/whatsapp/v1/';
 
 export function proxy(action, { request, env }) {
-  if (!['status', 'connect', 'disconnect'].includes(action)) {
+  if (!['status', 'connect', 'disconnect', 'automation'].includes(action)) {
     return Response.json({ error: 'not_found' }, { status: 404, headers: { 'Cache-Control': 'no-store' } });
   }
   const method = action === 'status' ? 'GET' : 'POST';
@@ -11,6 +11,7 @@ export function proxy(action, { request, env }) {
   let target;
   try {
     target = new URL(`${path}${action}`, env.LEADIA_AI_ORIGIN);
+    target.search = new URL(request.url).search;
     if (target.protocol !== 'https:') throw new Error('invalid origin');
   } catch {
     return Response.json({ error: 'whatsapp_not_configured' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });

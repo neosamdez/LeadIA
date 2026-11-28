@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { verifyUser, createLimiter } from './ai.mjs';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const routes = new Set(['/whatsapp/v1/status', '/whatsapp/v1/connect', '/whatsapp/v1/disconnect']);
+const routes = new Set(['/whatsapp/v1/status', '/whatsapp/v1/connect', '/whatsapp/v1/disconnect', '/whatsapp/v1/automation']);
 
 function json(response, status, body) {
   response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
@@ -10,7 +10,7 @@ function json(response, status, body) {
 }
 
 export function createWhatsappHandler({ authUrl, apiKey, evolutionEnabled, evolutionApiUrl, evolutionApiKey,
-  evolutionWebhookUrl, fetch: fetchImpl = fetch, now = Date.now }) {
+  evolutionWebhookUrl, claudeKey, fetch: fetchImpl = fetch, now = Date.now }) {
   const cache = new Map();
   const allow = createLimiter({ limit: 12, windowMs: 60_000, now });
 
@@ -38,7 +38,7 @@ export function createWhatsappHandler({ authUrl, apiKey, evolutionEnabled, evolu
   }
 
   async function setWebhook(instanceName, secret) {
-    return evolution(`/event/webhook/set/${encodeURIComponent(instanceName)}`, {
+    return evolution(`/webhook/set/${encodeURIComponent(instanceName)}`, {
       method: 'POST', body: JSON.stringify({ webhook: {
         enabled: true, url: evolutionWebhookUrl,
         headers: { Authorization: `Bearer ${secret}` },
@@ -62,6 +62,7 @@ export function createWhatsappHandler({ authUrl, apiKey, evolutionEnabled, evolu
     if (!evolutionEnabled) return json(response, 503, { error: 'whatsapp_not_configured' });
 
     let orgId = url.searchParams.get('orgId');
+    let enabled;
     if (request.method === 'POST') {
       let size = 0;
       const chunks = [];
@@ -73,6 +74,7 @@ export function createWhatsappHandler({ authUrl, apiKey, evolutionEnabled, evolu
       try {
         const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
         orgId = body.orgId;
+        enabled = body.enabled;
       } catch { return json(response, 400, { error: 'invalid_json' }); }
     }
     if (!uuid.test(orgId ?? '')) return json(response, 400, { error: 'invalid_org' });
@@ -82,13 +84,34 @@ export function createWhatsappHandler({ authUrl, apiKey, evolutionEnabled, evolu
       if (channel?.denied) return json(response, 403, { error: 'forbidden' });
       if (request.method === 'GET') {
         if (!channel?.instance) return json(response, 200, { configured: true, connected: false, state: 'close' });
-        const state = await evolution(`/instance/connectionState/${encodeURIComponent(channel.instance)}`);
+        const state = await evolution(`/instance/connectionState/${encodeURIComponent(channel.instance)}`)
+          .catch(error => { if (error.message === 'evolution_404') return null; throw error; });
         const connectionState = state?.instance?.state ?? state?.state ?? 'close';
         const connected = connectionState === 'open';
         await userRpc(token, 'whatsapp_channel_set_connected', {
           p_org_id: orgId, p_connected: connected, p_state: connectionState,
         });
-        return json(response, 200, { configured: true, connected, state: connectionState });
+        return json(response, 200, { configured: true, connected, state: connectionState,
+          automationEnabled: connected && channel.automationEnabled === true });
+      }
+
+      if (await userRpc(token, 'can_write_org', { target_org: orgId, admin_only: true }) !== true) {
+        return json(response, 403, { error: 'forbidden' });
+      }
+
+      if (url.pathname.endsWith('/automation')) {
+        if (typeof enabled !== 'boolean') return json(response, 400, { error: 'invalid_request' });
+        if (enabled && !claudeKey) return json(response, 503, { error: 'agent_model_unavailable' });
+        if (enabled && channel?.instance) {
+          const state = await evolution(`/instance/connectionState/${encodeURIComponent(channel.instance)}`);
+          if ((state?.instance?.state ?? state?.state) !== 'open') {
+            return json(response, 409, { error: 'whatsapp_not_connected' });
+          }
+        }
+        const result = await userRpc(token, 'whatsapp_set_automation', { p_org_id: orgId, p_enabled: enabled });
+        if (result?.denied) return json(response, 403, { error: 'forbidden' });
+        if (result?.error) return json(response, 409, result);
+        return json(response, 200, result);
       }
 
       if (url.pathname.endsWith('/disconnect')) {
@@ -108,7 +131,8 @@ export function createWhatsappHandler({ authUrl, apiKey, evolutionEnabled, evolu
       const secret = randomBytes(32).toString('base64url');
       await userRpc(token, 'whatsapp_channel_set_webhook_secret', { p_org_id: orgId, p_secret: secret });
       let current;
-      try { current = await evolution(`/instance/connectionState/${encodeURIComponent(instance)}`); } catch {}
+      try { current = await evolution(`/instance/connectionState/${encodeURIComponent(instance)}`); }
+      catch (error) { if (error.message !== 'evolution_404') throw error; }
       let state = current?.instance?.state ?? current?.state;
       let qr = null;
       if (!state) {

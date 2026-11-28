@@ -35,7 +35,7 @@ Dokploy. Faça backup dos volumes `evolution_instances` e `evolution_postgres`.
    ambiente seguro (não grave a chamada com segredos no histórico do shell):
 
    ```bash
-   curl -X POST "$EVOLUTION_SERVER_URL/event/webhook/set/$EVOLUTION_INSTANCE" \
+   curl -X POST "$EVOLUTION_SERVER_URL/webhook/set/$EVOLUTION_INSTANCE" \
      -H "apikey: $EVOLUTION_API_KEY" -H "content-type: application/json" \
      -d "{\"webhook\":{\"enabled\":true,\"url\":\"https://DOMINIO_DO_ADAPTADOR/webhooks/evolution\",\"headers\":{\"Authorization\":\"Bearer ${EVOLUTION_WEBHOOK_TOKEN}\"},\"events\":[\"MESSAGES_UPSERT\",\"MESSAGES_UPDATE\"],\"byEvents\":false,\"base64\":false}}"
    ```

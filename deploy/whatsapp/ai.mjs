@@ -129,7 +129,7 @@ export function normalizeRequest(body) {
 }
 
 /** Chama a Messages API da Anthropic. Sem temperature: o modelo Haiku 5.5 rejeita o campo. */
-export async function callClaude({ system, maxTokens, messages, responseFormat }, { claudeKey, claudeModel, fetch: fetchImpl = fetch }) {
+export async function callClaude({ system, maxTokens, messages, responseFormat }, { claudeKey, claudeModel, timeoutMs = 20000, fetch: fetchImpl = fetch }) {
   const payload = { model: claudeModel, max_tokens: maxTokens, messages };
   if (system) payload.system = system;
   if (claudeModel === 'claude-haiku-5-5') payload.thinking = { type: 'disabled' };
@@ -138,7 +138,7 @@ export async function callClaude({ system, maxTokens, messages, responseFormat }
     method: 'POST',
     headers: { 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
     body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(20000),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   if (!response.ok) throw new Error(`anthropic_${response.status}`);
   const data = await response.json();
