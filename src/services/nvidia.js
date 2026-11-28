@@ -50,7 +50,7 @@ function toChatMessages(conversations, lead, settings, playbook) {
 }
 
 /** Envia o chat ao backend com o token da sessão. `system` vai separado, como o servidor espera. */
-async function callAi(messages, signal, maxTokens = 220) {
+async function callAi(messages, signal, maxTokens = 220, responseFormat) {
   if (!supabase) throw new Error('IA indisponível no modo demonstração.');
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData?.session?.access_token;
@@ -58,13 +58,16 @@ async function callAi(messages, signal, maxTokens = 220) {
 
   const system = messages.filter(m => m.role === 'system').map(m => m.content).join('\n');
   const chat = messages.filter(m => m.role !== 'system').map(({ role, content }) => ({ role, content }));
+  if (!chat.length) {
+    chat.push({ role: 'user', content: 'Gere a primeira mensagem da conversa com base no contexto.' });
+  }
 
   let res;
   try {
     res = await fetch(AI_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ system, messages: chat, maxTokens }),
+      body: JSON.stringify({ system, messages: chat, maxTokens, responseFormat }),
       signal,
     });
   } catch (err) {
@@ -105,6 +108,6 @@ export async function generateNvidiaClientMessage({ lead, conversations, setting
 // Gera a configuração do agente a partir do objetivo e do contexto do negócio.
 // Devolve só campos de comportamento já validados; quem chama decide aplicar no rascunho.
 export async function generateAgentConfig({ objective, description, context, settings, signal }) {
-  const text = await callAi(agentPrompt(objective, description, context), signal, 900);
+  const text = await callAi(agentPrompt(objective, description, context), signal, 1200, 'agent_config');
   return parseAgentJson(text);
 }

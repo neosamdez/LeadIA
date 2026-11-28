@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { test } from 'node:test';
 import { createWebhook } from '../deploy/whatsapp/webhook.mjs';
-import { createAiHandler, normalizeRequest } from '../deploy/whatsapp/ai.mjs';
+import { callClaude, createAiHandler, normalizeRequest } from '../deploy/whatsapp/ai.mjs';
 
 const token = 'a'.repeat(40);
 const authUrl = 'http://gateway.test/auth/v1';
@@ -42,6 +42,25 @@ async function start(t, ai) {
 
 const body = JSON.stringify({ system: 'Você configura um agente.', messages: [{ role: 'user', content: 'Quero vender apartamentos' }], maxTokens: 300 });
 const authed = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+
+test('configuração de agente usa o esquema fixo e rejeita JSON truncado', async () => {
+  const request = normalizeRequest({ ...JSON.parse(body), responseFormat: 'agent_config' });
+  assert.equal(normalizeRequest({ ...JSON.parse(body), responseFormat: { type: 'arbitrary' } }), null);
+  const call = stopReason => callClaude(request, {
+    claudeKey: 'test-key',
+    claudeModel: 'claude-haiku-5-5',
+    fetch: async (_url, options) => {
+      const payload = JSON.parse(options.body);
+      assert.deepEqual(payload.thinking, { type: 'disabled' });
+      assert.equal(payload.output_config.format.type, 'json_schema');
+      assert.equal(payload.output_config.format.schema.additionalProperties, false);
+      assert.ok(payload.output_config.format.schema.required.includes('purpose'));
+      return Response.json({ stop_reason: stopReason, content: [{ type: 'text', text: '{"purpose":"Teste"}' }] });
+    },
+  });
+  assert.equal(await call('end_turn'), '{"purpose":"Teste"}');
+  await assert.rejects(call('max_tokens'), /anthropic_agent_config_truncated/);
+});
 
 test('sem chave da Anthropic o endpoint responde 503 e nada é chamado', async t => {
   const calls = [];
