@@ -11,6 +11,8 @@
 .wa-qr-area > div { display: grid; gap: 8px; }
 .wa-qr-area ol { margin: 0; padding-left: 20px; color: var(--mute); font-size: 13px; line-height: 1.7; }
 .wa-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.wa-automation { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+.wa-automation strong { font-size: 13px; }
 .wa-spin { animation: wa-spin 1s linear infinite; }
 @keyframes wa-spin { to { transform: rotate(360deg); } }
 @media (max-width: 560px) { .wa-heading { flex-direction: column; } .wa-qr-area { flex-direction: column; align-items: flex-start; } .wa-qr { width: min(240px, 100%); align-self: center; } }

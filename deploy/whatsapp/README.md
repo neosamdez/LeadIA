@@ -92,7 +92,7 @@ Este mesmo serviço também atende a IA do app (Gerar com IA em Agentes e as sug
 
 ## Conexão do WhatsApp pelo app
 
-Na tela **Integrações**, owner/admin inicia **Conectar WhatsApp**, escaneia o QR em WhatsApp → Dispositivos conectados e acompanha o estado do número. O backend cria uma instância Evolution por organização. As mensagens recebidas entram em Conversas; respostas automáticas ficam desligadas até a configuração do agente de atendimento estar conectada ao worker.
+Publique o agente em **Agentes** com objetivo e permissão de responder. Em **Integrações → WhatsApp**, escaneie o QR em **Dispositivos conectados** e clique em **Ativar respostas**. Mensagens individuais recebidas após a ativação entram em Conversas e são respondidas com a revisão publicada. Use **Pausar respostas** para interromper novos envios mantendo o recebimento.
 
 Para habilitar o recurso no serviço de API, configure no ambiente privado:
 
@@ -103,4 +103,6 @@ Para habilitar o recurso no serviço de API, configure no ambiente privado:
 - `SUPABASE_SERVICE_ROLE_KEY` (somente no backend; nunca no frontend)
 - `SUPABASE_PUBLISHABLE_KEY`, `AI_AUTH_URL` e `WHATSAPP_CRM_URL` apontando para o mesmo projeto Supabase
 
-Aplique também `supabase/migrations/007_whatsapp_connection.sql`. O webhook recebe um segredo aleatório por instância; o banco persiste somente o hash. A instância aceita mensagens individuais recebidas e não habilita grupos nem automação de resposta. O cliente não digita telefone ou token: o número é identificado pelo pareamento QR.
+- `ANTHROPIC_API_KEY` e `CLAUDE_MODEL` para a geração de respostas.
+
+Aplique as migrações até `008_whatsapp_agent.sql`. O banco persiste apenas o hash do segredo do webhook. Verifique em um número de teste autorizado se uma mensagem recebida aparece em Conversas e a resposta chega ao telefone remetente. Em seguida pause e confira que uma nova mensagem é registrada sem resposta. Use um serviço contínuo e armazenamento persistente para atendimento diário.

@@ -6,7 +6,7 @@ import { FUNNEL_EVENTS, PLATFORMS, PROVIDERS, STATUS, buildUtmUrl, parseExternal
 import './Integracoes.css';
 
 export default function Integracoes() {
-  const { adIntegrations, user, members = [], orgId } = useApp();
+  const { adIntegrations, user, members = [], orgId, agent } = useApp();
   const real = user?.mode === 'real';
   const role = members.find(m => m.id === user?.id)?.role;
   const canEdit = !real || role === 'owner' || role === 'admin';
@@ -20,7 +20,7 @@ export default function Integracoes() {
         </div>
       </header>
 
-      {real && <WhatsAppConnection orgId={orgId} canEdit={canEdit} />}
+      {real && <WhatsAppConnection key={orgId} orgId={orgId} canEdit={canEdit} agentPublished={Boolean(agent?.publishedRevisionId)} />}
 
       {adIntegrations === null ? (
         <section className="card in-pad">
