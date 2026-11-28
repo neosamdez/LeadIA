@@ -1,4 +1,5 @@
 import { setTimeout as delay } from 'node:timers/promises';
+import { sendEvolutionText } from './evolution.mjs';
 
 const intents = ['interest', 'qualify', 'proposal', 'objection', 'follow_up', 'human'];
 const responses = {
@@ -122,7 +123,9 @@ export async function workOnce(rpc, config, log = console.log) {
     p_intent: decision.intent, p_need: decision.need, p_source: decision.source, p_model_intent: decision.modelIntent ?? null,
   });
   if (!prepared) return true;
-  const result = await deliver(job, decision.reply, config);
+  const result = config.provider === 'evolution'
+    ? await sendEvolutionText(job, decision.reply, config)
+    : await deliver(job, decision.reply, config);
   const saved = await rpc('whatsapp_finish', {
     p_job: job.id, p_lease: job.lease_id, p_delivery: result.delivery, p_outbound_id: result.id ?? null,
   });

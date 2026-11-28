@@ -89,3 +89,15 @@ Este mesmo serviço também atende a IA do app (Gerar com IA em Agentes e as sug
 - Sem chave configurada, responde 503. Com token inválido, responde 401. Falha do modelo responde 502, e o app cai no modelo pronto ou mostra o erro sem enviar mensagem.
 - Para ativar: o Compose precisa ser reaplicado para ganhar o alias `leadia-whatsapp-dev` e a variável `AI_AUTH_URL`. O frontend (`LEADIA_AI_HOST`) aponta para esse alias por padrão.
 - Verificação: sem token, `POST /ai/v1/complete` deve responder 401. Com um token válido, deve responder 200 com `{"text": ...}`.
+
+## Provedor Evolution API (ensaio)
+
+`WHATSAPP_PROVIDER` escolhe o canal: `meta` (padrão, Cloud API oficial, produção) ou `evolution` (ensaio). A Meta continua sendo o caminho de produção e nada muda para quem não define `WHATSAPP_PROVIDER`.
+
+- Riscos: a Evolution usa Baileys, que implementa o protocolo não oficial do WhatsApp Web. Pode haver bloqueio do número e não há garantia de compatibilidade com mudanças do WhatsApp. Use só com número de teste dedicado. Não use em produção sem decisão explícita.
+- Variáveis (Environment do serviço, nunca no Git): `EVOLUTION_API_URL`, `EVOLUTION_API_KEY`, `EVOLUTION_INSTANCE`, `EVOLUTION_WEBHOOK_SECRET` (mínimo 32 caracteres), `EVOLUTION_CHANNEL_KEY` (dígitos, chave do canal no banco). `WHATSAPP_TEST_RECIPIENTS` vale para os dois provedores.
+- Canal no banco: use um `phone_number_id` numérico reservado para o ensaio, igual a `EVOLUTION_CHANNEL_KEY`. Ele não é um número de telefone; é só a chave do canal.
+- Webhook da Evolution: configure `POST` para `https://<host-do-webhook>/webhooks/evolution` com o evento `MESSAGES_UPSERT` e `MESSAGES_UPDATE`, e o header `x-leadia-webhook-secret` com o mesmo valor de `EVOLUTION_WEBHOOK_SECRET`. O serviço recusa qualquer chamada sem ele (403).
+- Envio: `POST {EVOLUTION_API_URL}/message/sendText/{instância}` com header `apikey`. O corpo usa `{number, text}`, conforme a especificação 2.1. A documentação 2.3 usa `textMessage.text`. Confirme a versão instalada antes do ensaio; a troca fica em `sendEvolutionText` (`evolution.mjs`).
+- Hospedagem: a sessão do WhatsApp fica no volume da Evolution. Precisa de disco persistente e processo sempre ligado. Instância gratuita sem disco e com suspensão (como o Render Free) não serve para sessão persistente. Escolha VPS ou plano com disco persistente.
+- Verificação: `/healthz` responde 200; sem o header, o webhook responde 403; a entrada do número de teste aparece em Conversas; a resposta sai pelo número de teste.

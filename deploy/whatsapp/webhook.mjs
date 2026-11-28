@@ -3,8 +3,10 @@ import { createServer } from 'node:http';
 import { pathToFileURL } from 'node:url';
 import { createRpc, runWorker } from './worker.mjs';
 import { createAiHandler } from './ai.mjs';
+import { evolutionConfigProblems, matchesSecret, readInbound, readStatuses } from './evolution.mjs';
 
 const endpoint = '/webhooks/whatsapp';
+const evolutionEndpoint = '/webhooks/evolution';
 const aiEndpoint = '/ai/v1/complete';
 const maxBodyBytes = 1024 * 1024;
 const phone = /^[1-9][0-9]{6,14}$/;
@@ -22,9 +24,23 @@ function reply(response, status, body = '') {
   response.end(body);
 }
 
-export function createWebhook({ verifyToken, appSecret, phoneNumberId, recipients, rpc, ai, whatsappEnabled = true, log = console.log }) {
+async function readBody(request) {
+  let size = 0;
+  const chunks = [];
+  for await (const chunk of request.iterator({ destroyOnReturn: false })) {
+    size += chunk.length;
+    if (size > maxBodyBytes) return null;
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks);
+}
+
+export function createWebhook({ verifyToken, appSecret, phoneNumberId, recipients, rpc, ai, evolution, whatsappEnabled = true, log = console.log }) {
   if (whatsappEnabled && (!verifyToken || !appSecret || !phoneNumberId || !recipients?.size || !rpc)) {
     throw new Error('WhatsApp test configuration is incomplete');
+  }
+  if (evolution && (!evolution.secret || !evolution.instance || !evolution.channelKey || !recipients?.size || !rpc)) {
+    throw new Error('Evolution configuration is incomplete');
   }
 
   return createServer(async (request, response) => {
@@ -35,6 +51,44 @@ export function createWebhook({ verifyToken, appSecret, phoneNumberId, recipient
     }
     if (url.pathname === aiEndpoint) {
       return ai ? ai(request, response) : reply(response, 404);
+    }
+    if (evolution && url.pathname === evolutionEndpoint) {
+      if (request.method !== 'POST') {
+        response.setHeader('Allow', 'POST');
+        return reply(response, 405);
+      }
+      if (!matchesSecret(evolution.secret, request.headers['x-leadia-webhook-secret'])) {
+        log(JSON.stringify({ event: 'evolution_webhook_rejected', reason: 'invalid_secret', status: 403 }));
+        return reply(response, 403);
+      }
+      try {
+        const body = await readBody(request);
+        if (!body) return reply(response, 413);
+        let payload;
+        try {
+          payload = JSON.parse(body.toString('utf8'));
+        } catch {
+          return reply(response, 400);
+        }
+        const config = { instance: evolution.instance, recipients };
+        for (const item of readInbound(payload, config)) {
+          const result = await rpc('whatsapp_ingest', {
+            p_phone_id: evolution.channelKey, p_from: item.from, p_name: item.name, p_message_id: item.id,
+            p_content: item.content, p_received_at: item.receivedAt,
+          });
+          log(JSON.stringify({ event: 'whatsapp_inbound', provider: 'evolution', id: item.id.slice(-8), result }));
+        }
+        for (const item of readStatuses(payload, config)) {
+          if (await rpc('whatsapp_finish', { p_job: null, p_delivery: item.delivery, p_outbound_id: item.id })) {
+            log(JSON.stringify({ event: 'whatsapp_delivery', provider: 'evolution', id: item.id.slice(-8), result: item.delivery }));
+          }
+        }
+        log(JSON.stringify({ event: 'evolution_webhook_processed', status: 200 }));
+        return reply(response, 200);
+      } catch {
+        log(JSON.stringify({ event: 'evolution_webhook_retry', status: 503 }));
+        return reply(response, 503);
+      }
     }
     if (!whatsappEnabled || url.pathname !== endpoint) return reply(response, 404);
 
@@ -119,8 +173,17 @@ export function createWebhook({ verifyToken, appSecret, phoneNumberId, recipient
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const provider = process.env.WHATSAPP_PROVIDER ?? 'meta';
+  if (!['meta', 'evolution'].includes(provider)) throw new Error('WHATSAPP_PROVIDER must be meta or evolution');
   const config = {
-    whatsappEnabled: process.env.WHATSAPP_ENABLED !== 'false',
+    provider,
+    channelEnabled: process.env.WHATSAPP_ENABLED !== 'false',
+    whatsappEnabled: process.env.WHATSAPP_ENABLED !== 'false' && provider === 'meta',
+    evolutionUrl: process.env.EVOLUTION_API_URL?.replace(/\/$/, ''),
+    evolutionKey: process.env.EVOLUTION_API_KEY,
+    evolutionInstance: process.env.EVOLUTION_INSTANCE,
+    evolutionSecret: process.env.EVOLUTION_WEBHOOK_SECRET,
+    evolutionChannelKey: process.env.EVOLUTION_CHANNEL_KEY,
     apiKey: process.env.SUPABASE_PUBLISHABLE_KEY,
     verifyToken: process.env.WHATSAPP_VERIFY_TOKEN,
     appSecret: process.env.META_APP_SECRET,
@@ -137,18 +200,28 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   if (config.claudeKey && (!/^claude-haiku-/.test(config.claudeModel ?? '') || !/^https?:\/\//.test(config.authUrl ?? ''))) {
     throw new Error('AI server configuration is incomplete');
   }
-  if (config.whatsappEnabled && (!/^v[0-9]+\.[0-9]+$/.test(config.graphVersion ?? '')
+  if (config.channelEnabled && config.provider === 'meta' && (!/^v[0-9]+\.[0-9]+$/.test(config.graphVersion ?? '')
     || !/^[0-9]+$/.test(config.phoneNumberId ?? '') || !config.crmUrl || !config.crmToken || !config.accessToken
     || [...config.recipients].some(value => !phone.test(value)))) {
     throw new Error('WhatsApp worker configuration is incomplete');
   }
-  const rpc = config.whatsappEnabled ? createRpc(config) : null;
+  if (config.channelEnabled && config.provider === 'evolution') {
+    const problems = evolutionConfigProblems({ url: config.evolutionUrl, key: config.evolutionKey, instance: config.evolutionInstance,
+      secret: config.evolutionSecret, channel: config.evolutionChannelKey });
+    if (problems.length || !config.crmUrl || !config.crmToken || [...config.recipients].some(value => !phone.test(value))) {
+      throw new Error('Evolution worker configuration is incomplete');
+    }
+  }
+  const rpc = config.channelEnabled ? createRpc(config) : null;
   const ai = createAiHandler(config);
-  const server = createWebhook({ ...config, rpc, ai });
+  const evolution = config.channelEnabled && config.provider === 'evolution' ? {
+    secret: config.evolutionSecret, instance: config.evolutionInstance, channelKey: config.evolutionChannelKey,
+  } : undefined;
+  const server = createWebhook({ ...config, rpc, ai, evolution });
   const stop = new AbortController();
   for (const signal of ['SIGTERM', 'SIGINT']) {
     process.once(signal, () => { stop.abort(); server.close(); });
   }
   server.listen(3000, '0.0.0.0');
-  if (config.whatsappEnabled) await runWorker(rpc, config, stop.signal);
+  if (config.channelEnabled) await runWorker(rpc, config, stop.signal);
 }
