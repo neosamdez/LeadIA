@@ -85,7 +85,7 @@ Se a entrada não aparecer, confira a tentativa de entrega na Meta e compare o P
 Este mesmo serviço também atende a IA do app (Gerar com IA em Agentes e as sugestões de Conversas). O navegador nunca recebe a chave da Anthropic.
 
 - Fluxo: o app envia o token da sessão Supabase para `/ai/v1/complete`. O nginx do frontend repassa a `leadia-whatsapp-dev:3000`. O webhook valida o token no GoTrue (`AI_AUTH_URL`, pelo gateway `leadia-dev-backend:8000`) e chama a Anthropic com `ANTHROPIC_API_KEY` e `CLAUDE_MODEL`.
-- Limites: 20 chamadas por minuto por usuário, corpo até 64 KB, até 1200 tokens de saída, 20 s de timeout.
+- Limites: 20 chamadas por minuto por usuário, corpo até 64 KB, até 1200 tokens de saída para conversa e 3000 para configuração estruturada de agente, 20 s de timeout.
 - Sem chave configurada, responde 503. Com token inválido, responde 401. Falha do modelo responde 502, e o app cai no modelo pronto ou mostra o erro sem enviar mensagem.
 - Para ativar: o Compose precisa ser reaplicado para ganhar o alias `leadia-whatsapp-dev` e a variável `AI_AUTH_URL`. O frontend (`LEADIA_AI_HOST`) aponta para esse alias por padrão.
 - Verificação: sem token, `POST /ai/v1/complete` deve responder 401. Com um token válido, deve responder 200 com `{"text": ...}`.

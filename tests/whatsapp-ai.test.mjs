@@ -44,13 +44,17 @@ const body = JSON.stringify({ system: 'Você configura um agente.', messages: [{
 const authed = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 
 test('configuração de agente usa o esquema fixo e rejeita JSON truncado', async () => {
-  const request = normalizeRequest({ ...JSON.parse(body), responseFormat: 'agent_config' });
+  const request = normalizeRequest({ ...JSON.parse(body), maxTokens: 3000, responseFormat: 'agent_config' });
+  assert.equal(request.maxTokens, 3000);
+  assert.equal(normalizeRequest({ ...JSON.parse(body), maxTokens: 3001, responseFormat: 'agent_config' }), null);
+  assert.equal(normalizeRequest({ ...JSON.parse(body), maxTokens: 1201 }), null);
   assert.equal(normalizeRequest({ ...JSON.parse(body), responseFormat: { type: 'arbitrary' } }), null);
   const call = stopReason => callClaude(request, {
     claudeKey: 'test-key',
     claudeModel: 'claude-haiku-5-5',
     fetch: async (_url, options) => {
       const payload = JSON.parse(options.body);
+      assert.equal(payload.max_tokens, 3000);
       assert.deepEqual(payload.thinking, { type: 'disabled' });
       assert.equal(payload.output_config.format.type, 'json_schema');
       assert.equal(payload.output_config.format.schema.additionalProperties, false);
