@@ -78,12 +78,13 @@ test('o worker grava a decisão antes de enviar e registra resultado incerto sem
   assert.equal(calls[3][1].p_delivery, 'uncertain');
 });
 
-test('webhook Evolution exige token e normaliza texto e recibo da instancia autorizada', async t => {
+test('webhook Evolution valida segredo por instância e normaliza mensagens recebidas', async t => {
   const calls = [];
   const logs = [];
+  const webhookToken = 'evolution-test-token-with-32-characters';
   const server = createWebhook({ whatsappEnabled: false, evolutionEnabled: true,
-    evolutionWebhookToken: 'evolution-test-token', log: line => logs.push(JSON.parse(line)),
-    rpc: async (name, args) => { calls.push([name, args]); return name === 'whatsapp_ingest' ? 'stored' : true; },
+    log: line => logs.push(JSON.parse(line)),
+    rpc: async (name, args) => { calls.push([name, args]); return name === 'whatsapp_ingest_evolution' ? 'stored' : true; },
   });
   t.after(() => new Promise(resolve => server.close(resolve)));
   server.listen(0, '127.0.0.1');
@@ -94,23 +95,21 @@ test('webhook Evolution exige token e normaliza texto e recibo da instancia auto
     pushName: 'Lead de teste', message: { conversation: 'Oi, quero saber mais' },
     messageTimestamp: String(Math.floor(Date.now() / 1000)),
   } };
-  const send = (body, authorization = 'Bearer evolution-test-token') => fetch(url, {
+  const send = (body, authorization = `Bearer ${webhookToken}`) => fetch(url, {
     method: 'POST', headers: { Authorization: authorization, 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   });
   assert.equal((await send(payload, 'Bearer wrong')).status, 403);
   assert.equal(calls.length, 0);
   assert.equal((await send(payload)).status, 200);
-  assert.deepEqual(calls[0], ['whatsapp_ingest', {
-    p_phone_id: 'leadia-test', p_from: job.recipient, p_name: 'Lead de teste',
+  assert.deepEqual(calls[0], ['whatsapp_ingest_evolution', {
+    p_instance: 'leadia-test', p_webhook_token: webhookToken, p_from: job.recipient, p_name: 'Lead de teste',
     p_message_id: 'evolution:leadia-test:BAE5TEST', p_content: 'Oi, quero saber mais',
     p_received_at: new Date(Number(payload.data.messageTimestamp) * 1000).toISOString(),
   }]);
   assert.equal((await send({ event: 'messages.update', instance: 'leadia-test', data: {
     key: { id: 'BAE5OUT' }, update: { status: 3 },
   } })).status, 200);
-  assert.deepEqual(calls[1], ['whatsapp_finish', {
-    p_job: null, p_delivery: 'read', p_outbound_id: 'evolution:leadia-test:BAE5OUT',
-  }]);
+  assert.equal(calls.length, 1);
   assert.ok(logs.some(entry => entry.event === 'evolution_webhook_rejected'));
 });
 

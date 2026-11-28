@@ -89,3 +89,18 @@ Este mesmo serviço também atende a IA do app (Gerar com IA em Agentes e as sug
 - Sem chave configurada, responde 503. Com token inválido, responde 401. Falha do modelo responde 502, e o app cai no modelo pronto ou mostra o erro sem enviar mensagem.
 - Para ativar: o Compose precisa ser reaplicado para ganhar o alias `leadia-whatsapp-dev` e a variável `AI_AUTH_URL`. O frontend (`LEADIA_AI_HOST`) aponta para esse alias por padrão.
 - Verificação: sem token, `POST /ai/v1/complete` deve responder 401. Com um token válido, deve responder 200 com `{"text": ...}`.
+
+## Conexão do WhatsApp pelo app
+
+Na tela **Integrações**, owner/admin inicia **Conectar WhatsApp**, escaneia o QR em WhatsApp → Dispositivos conectados e acompanha o estado do número. O backend cria uma instância Evolution por organização. As mensagens recebidas entram em Conversas; respostas automáticas ficam desligadas até a configuração do agente de atendimento estar conectada ao worker.
+
+Para habilitar o recurso no serviço de API, configure no ambiente privado:
+
+- `WHATSAPP_EVOLUTION_ENABLED=true`
+- `EVOLUTION_API_URL` (HTTPS público ou `http://leadia-evolution-api:8080` na rede Dokploy)
+- `EVOLUTION_API_KEY`
+- `EVOLUTION_WEBHOOK_URL` (URL HTTPS pública do endpoint `/webhooks/evolution` do serviço)
+- `SUPABASE_SERVICE_ROLE_KEY` (somente no backend; nunca no frontend)
+- `SUPABASE_PUBLISHABLE_KEY`, `AI_AUTH_URL` e `WHATSAPP_CRM_URL` apontando para o mesmo projeto Supabase
+
+Aplique também `supabase/migrations/007_whatsapp_connection.sql`. O webhook recebe um segredo aleatório por instância; o banco persiste somente o hash. A instância aceita mensagens individuais recebidas e não habilita grupos nem automação de resposta. O cliente não digita telefone ou token: o número é identificado pelo pareamento QR.

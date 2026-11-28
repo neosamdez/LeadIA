@@ -136,4 +136,35 @@ begin
     or not public.whatsapp_finish(task.id,'accepted','evolution:leadia-test:evolution-out',task.lease_id)
     then raise exception 'Evolution worker lifecycle failed'; end if;
 end $$;
+reset role;
+set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000011"}',true);
+do $$
+declare channel jsonb;
+begin
+  channel := public.whatsapp_channel_get('00000000-0000-4000-8000-000000000021');
+  if channel->>'instance' <> 'leadia-test' then raise exception 'Owner cannot read WhatsApp connection'; end if;
+  if public.whatsapp_channel_set_webhook_secret('00000000-0000-4000-8000-000000000021',
+    'connection-secret-for-test-123456789') is not true then raise exception 'Could not set per-channel webhook secret'; end if;
+  if public.whatsapp_channel_set_connected('00000000-0000-4000-8000-000000000021',true,'open') is not true then
+    raise exception 'Could not enable connected channel'; end if;
+  begin
+    perform public.whatsapp_channel_get('00000000-0000-4000-8000-000000000022');
+    raise exception 'Another organization channel was exposed';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+reset role;
+set local role service_role;
+do $$
+begin
+  if public.whatsapp_ingest_evolution('leadia-test','invalid-secret','15550000103','QA','per-channel-1','Oi',now()) <> 'ignored'
+    then raise exception 'Invalid webhook secret accepted'; end if;
+  if public.whatsapp_ingest_evolution('leadia-test','connection-secret-for-test-123456789','15550000103','QA','per-channel-1','Oi',now()) <> 'stored'
+    or public.whatsapp_ingest_evolution('leadia-test','connection-secret-for-test-123456789','15550000103','QA','per-channel-1','Oi',now()) <> 'duplicate'
+    then raise exception 'Per-channel webhook ingestion failed'; end if;
+  if public.whatsapp_ingest_evolution('leadia-test','connection-secret-for-test-123456789','15550000104','QA','not-allowed','Oi',now()) <> 'ignored'
+    then raise exception 'Unapproved recipient accepted'; end if;
+end $$;
+reset role;
 rollback;

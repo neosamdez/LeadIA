@@ -9,6 +9,8 @@ services:
     envVars:
       - key: WHATSAPP_ENABLED
         value: "false"
+      - key: WHATSAPP_EVOLUTION_ENABLED
+        value: "false"
       - key: SUPABASE_PUBLISHABLE_KEY
         sync: false
       - key: AI_AUTH_URL
@@ -17,3 +19,11 @@ services:
         sync: false
       - key: CLAUDE_MODEL
         value: claude-haiku-5-5
+      - key: EVOLUTION_API_URL
+        sync: false
+      - key: EVOLUTION_API_KEY
+        sync: false
+      - key: EVOLUTION_WEBHOOK_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false

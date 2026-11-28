@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Check, Copy, Plus, Power, Trash2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import WhatsAppConnection from '../components/WhatsAppConnection';
 import { FUNNEL_EVENTS, PLATFORMS, PROVIDERS, STATUS, buildUtmUrl, parseExternalId, trackingChecklist } from '../lib/adIntegrations';
 import './Integracoes.css';
 
 export default function Integracoes() {
-  const { adIntegrations, user, members = [] } = useApp();
+  const { adIntegrations, user, members = [], orgId } = useApp();
   const real = user?.mode === 'real';
   const role = members.find(m => m.id === user?.id)?.role;
   const canEdit = !real || role === 'owner' || role === 'admin';
@@ -18,6 +19,8 @@ export default function Integracoes() {
           <p>Contas de anúncio e rastreamento do cliente, e as ferramentas do dia a dia de tráfego pago.</p>
         </div>
       </header>
+
+      {real && <WhatsAppConnection orgId={orgId} canEdit={canEdit} />}
 
       {adIntegrations === null ? (
         <section className="card in-pad">
