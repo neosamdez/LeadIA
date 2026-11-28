@@ -108,6 +108,6 @@ export async function generateNvidiaClientMessage({ lead, conversations, setting
 // Gera a configuração do agente a partir do objetivo e do contexto do negócio.
 // Devolve só campos de comportamento já validados; quem chama decide aplicar no rascunho.
 export async function generateAgentConfig({ objective, description, context, settings, signal }) {
-  const text = await callAi(agentPrompt(objective, description, context), signal, 1200, 'agent_config');
+  const text = await callAi(agentPrompt(objective, description, context), signal, 3000, 'agent_config');
   return parseAgentJson(text);
 }

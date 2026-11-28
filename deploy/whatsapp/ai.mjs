@@ -104,7 +104,8 @@ export function normalizeRequest(body) {
   const maxTokens = body.maxTokens ?? 300;
   const responseFormat = body.responseFormat;
   if (responseFormat !== undefined && responseFormat !== 'agent_config') return null;
-  if (!Number.isInteger(maxTokens) || maxTokens < 1 || maxTokens > 1200) return null;
+  const maxAllowedTokens = responseFormat === 'agent_config' ? 3000 : 1200;
+  if (!Number.isInteger(maxTokens) || maxTokens < 1 || maxTokens > maxAllowedTokens) return null;
   if (!Array.isArray(body.messages) || body.messages.length < 1 || body.messages.length > 30) return null;
 
   const messages = [];
