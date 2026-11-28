@@ -1,18 +1,14 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
+import { AppContext } from './contextCore';
+import RealAppProvider from './RealAppProvider';
 import { seedConversations, seedLeads } from '../data/mockData';
 import { personas, defaultPersonaId } from '../data/personas';
-import { isSupabaseConfigured } from '../lib/config';
-import { onAuthStateChange, signOut } from '../services/auth';
-import { getOrCreateDefaultOrg } from '../services/org';
-import * as leadsService from '../services/leads';
-import * as conversationsService from '../services/conversations';
-import * as followUpsService from '../services/followUps';
-import * as goalsService from '../services/goals';
-import * as settingsService from '../services/settings';
-import { dbLeadToApp, appLeadToDb, dbMessageToApp, dbFollowUpToApp, appFollowUpToDb } from '../lib/mappers';
+import { isRealMode } from '../lib/config';
+import { followUpDueDate } from '../lib/followUpDates';
+import { EMPTY_CONTEXT } from '../lib/orgContext';
+import { EMPTY_AGENT } from '../lib/agentSim';
 
-const AppContext = createContext(null);
-const STORAGE_KEY = 'leadia_app_v1';
+const STORAGE_KEY = 'leadia_demo_v1';
 
 function loadState() {
   try {
@@ -78,89 +74,35 @@ const defaultState = {
     tone: 'Profissional e amigável',
     autoReply: true,
     followUp: true,
-    nvidiaApiKey: '',
     nvidiaModel: import.meta.env.VITE_NVIDIA_MODEL || 'nvidia/nemotron-3.5-lightning-30b-a3b',
     nvidiaProxyUrl: import.meta.env.VITE_NVIDIA_PROXY_URL || '',
     useNvidiaApi: true,
   },
   tour: { active: false, step: 0 },
+  adIntegrations: [],
+  agent: { id: 'demo-agent', kind: 'atendimento', name: 'Atendimento', draft: EMPTY_AGENT, publishedRevisionId: null, revisions: [] },
 };
 
-export function AppProvider({ children }) {
+// Revisões do modo demonstração: mesma regra do banco, numeração crescente e histórico preservado.
+function publishDemo(s, config, restoredFrom) {
+  const number = (s.agent.revisions[0]?.number || 0) + 1;
+  const ctx = s.settings.context || {};
+  const revision = { id: `demo-rev-${number}`, number, config, restoredFrom, createdBy: s.user?.id || '', createdAt: new Date().toISOString(),
+    context: { company_name: s.settings.companyName, value_proposition: ctx.valueProposition || '', offers: ctx.offers || '', timezone: ctx.timezone || 'America/Sao_Paulo' } };
+  return { ...s, agent: { ...s.agent, draft: config, publishedRevisionId: revision.id, revisions: [revision, ...s.agent.revisions] } };
+}
+
+function DemoAppProvider({ children }) {
   const [state, setState] = useState(() => mergeState(loadState()));
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
-  useEffect(() => {
-    if (!isSupabaseConfigured()) return undefined;
-    const { data } = onAuthStateChange((_event, session) => {
-      const u = session?.user;
-      setState((s) => {
-        if (u) {
-          return {
-            ...s,
-            user: {
-              id: u.id,
-              name: u.user_metadata?.full_name || u.email?.split('@')[0] || 'Usuário',
-              company: u.user_metadata?.company || s.user?.company || 'Minha Empresa',
-              email: u.email || '',
-              mode: 'real',
-            },
-          };
-        }
-        if (s.user?.mode === 'real') return { ...s, user: null };
-        return s;
-      });
-    });
-    return () => data?.subscription?.unsubscribe?.();
-  }, []);
-
-  useEffect(() => {
-    if (!isSupabaseConfigured() || state.user?.mode !== 'real' || !state.user?.id) return undefined;
-    let cancelled = false;
-    (async () => {
-      try {
-        const org = await getOrCreateDefaultOrg({ id: state.user.id, email: state.user.email, user_metadata: { company: state.user.company, full_name: state.user.name } });
-        if (cancelled) return;
-        const [dbLeads, dbConvs, dbFollowUps, dbGoals, dbSettings] = await Promise.all([
-          leadsService.listLeads(org.id),
-          conversationsService.listConversations(org.id),
-          followUpsService.listFollowUps(org.id).catch((e) => { console.error('load followUps', e); return []; }),
-          goalsService.getGoals(org.id).catch((e) => { console.error('load goals', e); return null; }),
-          settingsService.getOrgSettings(org.id).catch((e) => { console.error('load settings', e); return null; }),
-        ]);
-        if (cancelled) return;
-        const leads = (dbLeads || []).map(dbLeadToApp);
-        const conversations = {};
-        for (const c of (dbConvs || [])) {
-          const msgs = (c.messages || []).sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).map(dbMessageToApp);
-          conversations[c.lead_id] = msgs;
-        }
-        const followUps = (dbFollowUps || []).map(dbFollowUpToApp);
-        setState((s) => ({
-          ...s,
-          orgId: org.id,
-          leads,
-          conversations,
-          leadEvents: buildSeedEvents(leads, conversations),
-          followUps,
-          goals: dbGoals ? { ...s.goals, ...dbGoals } : s.goals,
-          settings: dbSettings ? { ...s.settings, ...dbSettings, nvidiaApiKey: s.settings.nvidiaApiKey } : s.settings,
-        }));
-      } catch (err) {
-        console.error('Falha ao carregar dados reais', err);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [state.user?.mode, state.user?.id]);
-
   const api = useMemo(() => ({
     ...state,
     login: (user) => setState((s) => ({ ...s, user })),
     logout: () => {
-      if (isSupabaseConfigured()) signOut().catch(() => {});
       setState((s) => ({ ...s, user: null }));
     },
     recordEvent: (leadId, event) => setState((s) => ({
@@ -178,19 +120,6 @@ export function AppProvider({ children }) {
             : s.leadEvents,
         };
       });
-      if (state.user?.mode === 'real' && state.orgId) {
-        const dbPatch = {};
-        if ('name' in patch) dbPatch.name = patch.name;
-        if ('company' in patch) dbPatch.company = patch.company;
-        if ('channel' in patch) dbPatch.channel = patch.channel;
-        if ('interest' in patch) dbPatch.interest = patch.interest;
-        if ('status' in patch) dbPatch.status = patch.status;
-        if ('score' in patch) dbPatch.score = patch.score;
-        if ('lastMessage' in patch) dbPatch.last_message = patch.lastMessage;
-        if ('tags' in patch) dbPatch.tags = patch.tags;
-        if ('avatar' in patch) dbPatch.avatar = patch.avatar;
-        if (Object.keys(dbPatch).length) leadsService.updateLead(id, dbPatch).catch((e) => console.error('updateLead supabase', e));
-      }
     },
     deleteLead: (id) => {
       setState((s) => {
@@ -198,40 +127,21 @@ export function AppProvider({ children }) {
         const { [id]: _ev, ...restEv } = s.leadEvents;
         return { ...s, leads: s.leads.filter((l) => l.id !== id), conversations: restConv, leadEvents: restEv, followUps: s.followUps.filter(f => f.leadId !== id) };
       });
-      if (state.user?.mode === 'real' && state.orgId) {
-        leadsService.deleteLead(id).catch((e) => console.error('deleteLead supabase', e));
-      }
     },
     dismissAlert: (alertId) => setState((s) => ({ ...s, dismissedAlerts: s.dismissedAlerts.includes(alertId) ? s.dismissedAlerts : [...s.dismissedAlerts, alertId] })),
     clearDismissedAlerts: () => setState((s) => ({ ...s, dismissedAlerts: [] })),
     addFollowUp: (fu) => {
       const localId = 'fu' + Date.now();
-      const localFu = { id: localId, done: false, createdAt: nowTime(), ...fu };
+      const createdAt = new Date().toISOString();
+      const localFu = { id: localId, done: false, createdAt, ...fu,
+        dueAt: followUpDueDate(fu, fu.createdAt || createdAt)?.toISOString() ?? null };
       setState((s) => ({ ...s, followUps: [localFu, ...s.followUps] }));
-      if (state.user?.mode === 'real' && state.orgId) {
-        (async () => {
-          try {
-            const created = await followUpsService.createFollowUp(state.orgId, appFollowUpToDb(localFu, state.orgId));
-            const mapped = dbFollowUpToApp(created);
-            setState((s) => ({ ...s, followUps: s.followUps.map((f) => (f.id === localId ? { ...mapped, createdAt: mapped.createdAt || f.createdAt } : f)) }));
-          } catch (e) {
-            console.error('addFollowUp supabase', e);
-          }
-        })();
-      }
     },
     completeFollowUp: (id) => {
       setState((s) => ({ ...s, followUps: s.followUps.map(f => f.id === id ? { ...f, done: true, status: 'done' } : f) }));
-      if (state.user?.mode === 'real' && state.orgId) {
-        followUpsService.updateFollowUp(id, { status: 'done' }).catch((e) => console.error('completeFollowUp supabase', e));
-      }
     },
     updateGoals: (patch) => {
       setState((s) => ({ ...s, goals: { ...s.goals, ...patch } }));
-      if (state.user?.mode === 'real' && state.orgId) {
-        const next = { ...state.goals, ...patch };
-        goalsService.upsertGoals(state.orgId, next).catch((e) => console.error('updateGoals supabase', e));
-      }
     },
     updateLeadStatus: (id, status) => {
       setState((s) => {
@@ -244,9 +154,6 @@ export function AppProvider({ children }) {
           leadEvents: { ...s.leadEvents, [id]: [...(s.leadEvents[id] || []), { type: 'status', text: `Status alterado: ${prev || '—'} → ${status}`, time }] },
         };
       });
-      if (state.user?.mode === 'real' && state.orgId) {
-        leadsService.updateLead(id, { status }).catch((e) => console.error('updateLeadStatus supabase', e));
-      }
     },
     addLead: (lead) => {
       const time = lead.time || nowTime();
@@ -257,24 +164,6 @@ export function AppProvider({ children }) {
         conversations: { ...s.conversations, [localLead.id]: [] },
         leadEvents: { ...s.leadEvents, [localLead.id]: [{ type: 'lead', text: `Lead criado via ${localLead.channel || 'painel'}`, time }] },
       }));
-      if (state.user?.mode === 'real' && state.orgId) {
-        (async () => {
-          try {
-            const payload = appLeadToDb(localLead, state.orgId);
-            const created = await leadsService.createLead(state.orgId, payload);
-            const mapped = dbLeadToApp(created);
-            setState((s) => {
-              const conversations = { ...s.conversations, [mapped.id]: s.conversations[localLead.id] || [] };
-              if (mapped.id !== localLead.id) delete conversations[localLead.id];
-              const leadEvents = { ...s.leadEvents, [mapped.id]: s.leadEvents[localLead.id] || [] };
-              if (mapped.id !== localLead.id) delete leadEvents[localLead.id];
-              return { ...s, leads: s.leads.map((l) => (l.id === localLead.id ? { ...mapped, time: l.time } : l)), conversations, leadEvents };
-            });
-          } catch (e) {
-            console.error('addLead supabase', e);
-          }
-        })();
-      }
     },
     sendMessage: (leadId, message) => {
       setState((s) => {
@@ -283,38 +172,49 @@ export function AppProvider({ children }) {
         const leads = s.leads.map((l) => l.id === leadId ? { ...l, lastMessage: message.text, time: message.time } : l);
         return { ...s, conversations: { ...s.conversations, [leadId]: nextConv }, leads };
       });
-      if (state.user?.mode === 'real' && state.orgId) {
-        (async () => {
-          try {
-            const conv = await conversationsService.upsertConversation(state.orgId, leadId);
-            await conversationsService.addMessage(state.orgId, {
-              conversationId: conv.id,
-              leadId,
-              sender: message.from || 'client',
-              content: message.text,
-              meta: {},
-            });
-            await leadsService.updateLead(leadId, { last_message: message.text }).catch(() => {});
-          } catch (e) {
-            console.error('sendMessage supabase', e);
-          }
-        })();
-      }
     },
     updateSettings: (patch) => {
       setState((s) => ({ ...s, settings: { ...s.settings, ...patch } }));
-      if (state.user?.mode === 'real' && state.orgId) {
-        const { nvidiaApiKey: _localOnly, ...safePatch } = patch || {};
-        if (Object.keys(safePatch).length) {
-          settingsService.upsertOrgSettings(state.orgId, safePatch).catch((e) => console.error('updateSettings supabase', e));
-        }
-      }
+    },
+    updateContext: (patch) => {
+      setState((s) => ({ ...s, settings: { ...s.settings, context: { ...EMPTY_CONTEXT, ...s.settings.context, ...patch, updatedAt: new Date().toISOString(), updatedBy: s.user?.id || '' } } }));
+      return true;
+    },
+    addAdIntegration: (item) => {
+      if (state.adIntegrations.some((i) => i.provider === item.provider && i.externalId === item.externalId)) return null;
+      const now = new Date().toISOString();
+      const row = { id: `demo-ads-${Date.now()}`, ...item, status: 'aguardando_credenciais', settings: {}, lastError: '', createdAt: now, updatedAt: now };
+      setState((s) => ({ ...s, adIntegrations: [...s.adIntegrations, row] }));
+      return true;
+    },
+    updateAdIntegration: (id, patch) => {
+      setState((s) => ({ ...s, adIntegrations: s.adIntegrations.map((i) => i.id === id ? { ...i, ...patch, updatedAt: new Date().toISOString() } : i) }));
+      return true;
+    },
+    removeAdIntegration: (id) => {
+      setState((s) => ({ ...s, adIntegrations: s.adIntegrations.filter((i) => i.id !== id) }));
+      return true;
+    },
+    saveAgentDraft: (draft) => {
+      setState((s) => ({ ...s, agent: { ...s.agent, draft, updatedAt: new Date().toISOString() } }));
+      return true;
+    },
+    publishAgent: (draft) => {
+      setState((s) => publishDemo(s, draft, null));
+      return true;
+    },
+    restoreAgentRevision: (revisionId) => {
+      setState((s) => {
+        const old = s.agent.revisions.find((r) => r.id === revisionId);
+        return old ? publishDemo(s, old.config, old.id) : s;
+      });
+      return true;
     },
     applyPersona: (personaId) => setState((s) => {
       if (s.user?.mode === 'real') return s;
       const p = personas.find(x => x.id === personaId);
       if (!p) return s;
-      const keep = { nvidiaApiKey: s.settings.nvidiaApiKey, nvidiaModel: s.settings.nvidiaModel, nvidiaProxyUrl: s.settings.nvidiaProxyUrl, useNvidiaApi: s.settings.useNvidiaApi };
+      const keep = { nvidiaModel: s.settings.nvidiaModel, nvidiaProxyUrl: s.settings.nvidiaProxyUrl, useNvidiaApi: s.settings.useNvidiaApi };
       return {
         ...s,
         leads: p.leads,
@@ -331,7 +231,7 @@ export function AppProvider({ children }) {
       return {
         ...defaultState,
         user: s.user,
-        settings: { ...defaultState.settings, nvidiaApiKey: s.settings.nvidiaApiKey, nvidiaModel: s.settings.nvidiaModel, nvidiaProxyUrl: s.settings.nvidiaProxyUrl, useNvidiaApi: s.settings.useNvidiaApi },
+        settings: { ...defaultState.settings, nvidiaModel: s.settings.nvidiaModel, nvidiaProxyUrl: s.settings.nvidiaProxyUrl, useNvidiaApi: s.settings.useNvidiaApi },
       };
     }),
     startTour: () => setState((s) => ({ ...s, tour: { active: true, step: 0 } })),
@@ -395,4 +295,8 @@ export function useApp() {
   const ctx = useContext(AppContext);
   if (!ctx) throw new Error('useApp must be used within AppProvider');
   return ctx;
+}
+
+export function AppProvider({ children }) {
+  return isRealMode() ? <RealAppProvider>{children}</RealAppProvider> : <DemoAppProvider>{children}</DemoAppProvider>;
 }

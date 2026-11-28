@@ -1,0 +1,45 @@
+.hoje { max-width: 880px; }
+.hoje h2 { margin: 0; font-size: 18px; }
+.hoje-scope { display: flex; gap: 8px; flex-wrap: wrap; }
+.hoje-progress { padding: 18px 20px; display: grid; gap: 12px; }
+.hoje-progress p { margin: 4px 0 0; color: var(--mute); font-size: 14px; }
+.hoje-bar { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.hoje-bar span { display: block; height: 100%; background: #15803D; border-radius: inherit; transition: width .3s ease; }
+.hoje-feedback { min-height: 22px; margin: 10px 0; font-size: 14px; color: #15803D; }
+.hoje-next { padding: 24px; margin-bottom: 20px; border-color: var(--acc); }
+.hoje-next h2 { font-size: clamp(20px, 2.4vw, 26px); letter-spacing: -.02em; }
+.hoje-eyebrow { display: flex; gap: 6px; align-items: center; font-size: 13px; font-weight: 700; color: #B91C1C; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+.hoje-reason { margin: 8px 0 16px; color: var(--ink); line-height: 1.5; }
+.hoje-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0 0 20px; }
+.hoje-facts div { min-width: 0; }
+.hoje-facts dt { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--mute); margin-bottom: 4px; }
+.hoje-facts dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.hoje-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.hoje-actions .btn, .hoje-list .btn { text-decoration: none; display: inline-flex; gap: 6px; align-items: center; }
+.hoje-note { font-size: 13px; color: var(--mute); margin: 10px 0 0; }
+.hoje-empty { padding: 22px; display: flex; gap: 12px; align-items: flex-start; margin-bottom: 20px; }
+.hoje-empty p { margin: 6px 0 0; color: var(--mute); }
+.hoje-list { padding: 20px; margin-bottom: 20px; }
+.hoje-list ol, .hoje-list ul { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+.hoje-list li { display: flex; gap: 12px; align-items: center; padding: 12px; border: 1px solid var(--line); border-radius: 8px; }
+.hoje-item { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.hoje-item span { font-size: 12px; color: var(--mute); overflow-wrap: anywhere; }
+.hoje-more { display: inline-block; margin-top: 12px; font-size: 14px; color: var(--acc); }
+.hoje :focus-visible { outline: 2px solid #B91C1C; outline-offset: 2px; }
+
+@media (max-width: 640px) {
+  .hoje-facts { grid-template-columns: 1fr; }
+  .hoje-actions { justify-content: stretch; }
+  .hoje-actions .btn { flex: 1; justify-content: center; }
+  .hoje-list li { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hoje-bar span { transition: none; }
+}
+
+.hoje-priority { display: flex; gap: 12px; align-items: flex-start; padding: 18px 20px; margin-bottom: 16px; border-color: #99F6E4; }
+.hoje-priority svg { color: var(--acc); flex: none; margin-top: 2px; }
+.hoje-priority h2 { margin: 0 0 4px; font-size: 16px; }
+.hoje-priority p { margin: 0; font-size: 14px; color: var(--mute); }
+.hoje-priority p + p { margin-top: 6px; }
+.hoje-priority strong { color: var(--ink); font-size: 16px; }

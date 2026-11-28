@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -9,18 +9,34 @@ import Conversations from './pages/Conversations';
 import Analytics from './pages/Analytics';
 import Kanban from './pages/Kanban';
 import Alertas from './pages/Alertas';
-import Arquitetura from './pages/Arquitetura';
+import Agentes from './pages/Agentes';
+import Integracoes from './pages/Integracoes';
+import Hoje from './pages/Hoje';
 import Settings from './pages/Settings';
+import { DataDeletion, PrivacyPolicy } from './pages/Privacy';
 
 function Protected({ children }) {
-  const { user } = useApp();
-  if (!user) return <Navigate to="/login" replace />;
+  const location = useLocation();
+  const { user, authReady, databaseReady, loadError, retryLoad, logout } = useApp();
+  if (authReady === false) return <p role="status">Restaurando sessão...</p>;
+  if (!user) return <Navigate to="/login" replace state={{ returnTo: location.pathname + location.search + location.hash }} />;
+  if (user.mode === 'real' && (!databaseReady || loadError)) return <main style={{ padding: 32 }}>
+    <h1>{loadError ? 'Não foi possível carregar seus dados' : 'Carregando sua organização...'}</h1>
+    {loadError && <><p role="alert">{loadError}</p><button onClick={retryLoad}>Tentar novamente</button></>}
+    <button onClick={logout}>Sair</button>
+  </main>;
   return children;
 }
 
 function PublicOnly({ children }) {
-  const { user } = useApp();
-  if (user) return <Navigate to="/app" replace />;
+  const { state } = useLocation();
+  const { user, authReady } = useApp();
+  if (authReady === false) return <p role="status">Restaurando sessão...</p>;
+  if (user) {
+    const returnTo = state?.returnTo;
+    const destination = typeof returnTo === 'string' && /^\/app(?:[/?#]|$)/.test(returnTo) ? returnTo : '/app/hoje';
+    return <Navigate to={destination} replace />;
+  }
   return children;
 }
 
@@ -30,6 +46,8 @@ export default function App() {
       <BrowserRouter basename={import.meta.env.BASE_URL}>
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/privacidade" element={<PrivacyPolicy />} />
+          <Route path="/exclusao-de-dados" element={<DataDeletion />} />
           <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
           <Route path="/app" element={<Protected><AppLayout /></Protected>}>
             <Route index element={<Dashboard />} />
@@ -38,8 +56,11 @@ export default function App() {
             <Route path="conversas/:leadId" element={<Conversations />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="pipeline" element={<Kanban />} />
+            <Route path="hoje" element={<Hoje />} />
             <Route path="alertas" element={<Alertas />} />
-            <Route path="arquitetura" element={<Arquitetura />} />
+            <Route path="agentes" element={<Agentes />} />
+            <Route path="integracoes" element={<Integracoes />} />
+            <Route path="arquitetura" element={<Navigate to="/app" replace />} />
             <Route path="configuracoes" element={<Settings />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

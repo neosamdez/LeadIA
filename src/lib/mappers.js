@@ -1,13 +1,18 @@
+import { followUpDueDate } from './followUpDates';
+import { dbContextToApp } from './orgContext';
+
 export function dbLeadToApp(row) {
   if (!row) return row;
   return {
     id: row.id,
+    ownerId: row.owner_id || null,
     name: row.name,
     company: row.company || '',
+    phone: row.phone_e164 || '',
     channel: row.channel || 'WhatsApp',
     interest: row.interest || '',
     status: row.status || 'Novo',
-    value: row.value ?? 0,
+    value: Number(row.value ?? 0),
     lastMessage: row.last_message || '',
     time: row.updated_at ? new Date(row.updated_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '',
     avatar: row.avatar || (row.name || '?').split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase(),
@@ -15,6 +20,8 @@ export function dbLeadToApp(row) {
     tags: row.tags || [],
     nextAction: row.next_action || '',
     lossReason: row.loss_reason || '',
+    whatsappConnected: row.external_id?.startsWith('whatsapp:') || false,
+    whatsappPaused: row.whatsapp_paused === true,
     _db: true,
   };
 }
@@ -31,6 +38,10 @@ export function appLeadToDb(lead, orgId) {
     last_message: lead.lastMessage || null,
     avatar: lead.avatar || null,
     tags: lead.tags || [],
+    value: Number(lead.value || 0),
+    next_action: lead.nextAction || null,
+    loss_reason: lead.lossReason || null,
+    phone_e164: lead.phone || null,
   };
 }
 
@@ -40,6 +51,7 @@ export function dbMessageToApp(row) {
     text: row.content,
     time: row.created_at ? new Date(row.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '',
     id: row.id,
+    whatsappDelivery: row.meta?.channel === 'whatsapp' ? row.meta.delivery : undefined,
   };
 }
 
@@ -51,6 +63,7 @@ export function dbFollowUpToApp(row) {
     title: row.title || '',
     note: row.note || '',
     when: row.when_label || '',
+    dueAt: row.due_at || '',
     done: row.status === 'done',
     status: row.status || 'open',
     createdAt: row.created_at || '',
@@ -64,6 +77,7 @@ export function appFollowUpToDb(fu, orgId) {
     title: fu.title || '',
     note: fu.note || null,
     when_label: fu.when || null,
+    due_at: followUpDueDate(fu, fu.createdAt || new Date())?.toISOString() ?? null,
     status: fu.done ? 'done' : (fu.status || 'open'),
   };
 }
@@ -100,6 +114,7 @@ export function dbSettingsToApp(row) {
     useNvidiaApi: row.use_nvidia_api ?? true,
     nvidiaModel: row.nvidia_model ?? '',
     nvidiaProxyUrl: row.nvidia_proxy_url ?? '',
+    context: dbContextToApp(row),
   };
 }
 

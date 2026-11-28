@@ -1,0 +1,26 @@
+services:
+  webhook-evolution:
+    build: .
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      WHATSAPP_ENABLED: "false"
+      WHATSAPP_EVOLUTION_ENABLED: "true"
+      WHATSAPP_CRM_URL: http://leadia-dev-backend:8000
+      WHATSAPP_CRM_TOKEN: ${WHATSAPP_CRM_TOKEN:?required}
+      EVOLUTION_API_URL: ${EVOLUTION_API_URL:?required}
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:?required}
+      EVOLUTION_WEBHOOK_TOKEN: ${EVOLUTION_WEBHOOK_TOKEN:?required}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      CLAUDE_MODEL: ${CLAUDE_MODEL:-}
+      AI_AUTH_URL: http://leadia-dev-backend:8000/auth/v1
+    networks:
+      dokploy-network:
+        aliases: [leadia-whatsapp-evolution]
+    mem_limit: 128m
+    cpus: 0.25
+
+networks:
+  dokploy-network:
+    external: true

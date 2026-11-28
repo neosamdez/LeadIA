@@ -1,32 +1,15 @@
 import { requireSupabase } from '../lib/supabase';
 
-export async function getOrCreateDefaultOrg(user) {
+export async function getOrCreateDefaultOrg() {
   const sb = requireSupabase();
-  // Try to find existing membership
-  const { data: memberships, error: mErr } = await sb
-    .from('memberships')
-    .select('org_id, organizations(*)')
-    .eq('user_id', user.id)
-    .limit(1);
-  if (mErr) throw mErr;
-  if (memberships && memberships.length > 0) {
-    return memberships[0].organizations || { id: memberships[0].org_id };
-  }
+  const { data, error } = await sb.rpc('get_or_create_org').single();
+  if (error) throw error;
+  return data;
+}
 
-  // Create org + membership
-  const orgName = user.user_metadata?.company || user.email?.split('@')[0] || 'Minha Empresa';
-  const { data: org, error: oErr } = await sb
-    .from('organizations')
-    .insert({ name: orgName, created_by: user.id })
-    .select()
-    .single();
-  if (oErr) throw oErr;
-
-  const { error: msErr } = await sb.from('memberships').insert({ org_id: org.id, user_id: user.id, role: 'owner' });
-  if (msErr) throw msErr;
-
-  const { error: sErr } = await sb.from('org_settings').insert({ org_id: org.id });
-  if (sErr && sErr.code !== '23505') throw sErr;
-
-  return org;
+export async function listOrgMembers(orgId) {
+  const { data, error } = await requireSupabase().rpc('list_lead_assignees', { p_org_id: orgId });
+  if (error?.code === 'PGRST202') return [];
+  if (error) throw error;
+  return data.map(member => ({ id: member.user_id, role: member.role, name: member.full_name || 'Membro' }));
 }

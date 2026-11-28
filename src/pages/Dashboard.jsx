@@ -10,10 +10,10 @@ function Stat({ icon: Icon, label, value, note, color }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
         <div>
           <div style={{ color: 'var(--mute)', fontSize: 14, marginBottom: 6 }}>{label}</div>
-          <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-.03em', lineHeight: 1 }}>{value}</div>
+          <div style={{ fontSize: 32, fontWeight: 650, letterSpacing: '-.03em', lineHeight: 1 }}>{value}</div>
           <div style={{ color: 'var(--mute)', fontSize: 13, marginTop: 8 }}>{note}</div>
         </div>
-        <div style={{ width: 42, height: 42, borderRadius: 12, background: color.bg, color: color.fg, display: 'grid', placeItems: 'center' }}>
+        <div style={{ width: 42, height: 42, borderRadius: 8, background: color.bg, color: color.fg, display: 'grid', placeItems: 'center' }}>
           <Icon size={20} />
         </div>
       </div>
@@ -35,7 +35,7 @@ function ExecutiveSummary({ onClose }) {
     { k: 'Roadmap', v: 'V1 demo forte → V2 MVP técnico (backend/auth/banco) → V3 piloto com integrações oficiais e IA real.' },
   ];
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(19,34,44,.45)', display: 'grid', placeItems: 'center', padding: 20, zIndex: 120 }} onClick={onClose}>
+    <div style={{ position: 'fixed', inset: 0, background: '#F5F5F4', display: 'grid', placeItems: 'center', padding: 20, zIndex: 120 }} onClick={onClose}>
       <div className="card" onClick={(e) => e.stopPropagation()} style={{ width: 'min(760px, 100%)', padding: 28, maxHeight: '85vh', overflow: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 18 }}>
           <div>
@@ -46,7 +46,7 @@ function ExecutiveSummary({ onClose }) {
         </div>
         <div style={{ display: 'grid', gap: 12 }}>
           {items.map((it) => (
-            <div key={it.k} style={{ padding: 14, border: '1px solid var(--line)', borderRadius: 12, background: 'var(--surf-2)' }}>
+            <div key={it.k} style={{ padding: 14, border: '1px solid var(--line)', borderRadius: 8, background: 'var(--surf-2)' }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--acc)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 4 }}>{it.k}</div>
               <div style={{ fontSize: 14, color: 'var(--ink)' }}>{it.v}</div>
             </div>
@@ -58,7 +58,9 @@ function ExecutiveSummary({ onClose }) {
 }
 
 export default function Dashboard() {
-  const { leads, simulateScenario, startTour, applyPersona, activePersonaId } = useApp();
+  const { leads, conversations, leadEvents, user, simulateScenario, startTour, applyPersona, activePersonaId } = useApp();
+  const real = user?.mode === 'real';
+  const activity = Object.values(leadEvents).flat().sort((a,b) => (b.created_at || '').localeCompare(a.created_at || '')).slice(0,6);
   const [summary, setSummary] = useState(false);
   const [scenarioMsg, setScenarioMsg] = useState('');
 
@@ -94,17 +96,17 @@ export default function Dashboard() {
           <p>Visão geral do seu atendimento comercial com IA.</p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button className="btn btn-outline btn-sm" onClick={() => setSummary(true)}><FileText size={15} /> Resumo executivo</button>
-          <button className="btn btn-outline btn-sm" onClick={startTour}><Compass size={15} /> Iniciar tour</button>
+          {!real && <button className="btn btn-outline btn-sm" onClick={() => setSummary(true)}><FileText size={15} /> Resumo executivo</button>}
+          {!real && <button className="btn btn-outline btn-sm" onClick={startTour}><Compass size={15} /> Iniciar tour</button>}
           <Link to="/app/conversas" className="btn btn-primary btn-sm">Ver conversas <ArrowRight size={16} /></Link>
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 16, marginBottom: 24 }}>
-        <Stat icon={Users} label="Leads recebidos" value={stats.total} note={`${stats.emAberto} em aberto`} color={{ bg: 'rgba(96,165,250,.14)', fg: '#93C5FD' }} />
-        <Stat icon={MessageSquare} label="Atendimentos" value={stats.total} note="Resposta imediata da IA" color={{ bg: 'rgba(52,211,153,.14)', fg: '#6EE7B7' }} />
-        <Stat icon={TrendingUp} label="Taxa de conversão" value={`${stats.taxa}%`} note={`${stats.convertidos} convertidos`} color={{ bg: 'rgba(251,191,36,.14)', fg: '#FCD34D' }} />
-        <Stat icon={DollarSign} label="Receita gerada" value={`R$ ${stats.receita}`} note="No período simulado" color={{ bg: 'rgba(255,90,82,.14)', fg: '#FF8A84' }} />
+        <Stat icon={Users} label="Leads recebidos" value={stats.total} note={`${stats.emAberto} em aberto`} color={{ bg: 'var(--surf-2)', fg: 'var(--mute)' }} />
+        <Stat icon={MessageSquare} label="Atendimentos" value={real ? Object.values(conversations).filter(msgs => msgs.length > 0).length : stats.total} note={real ? 'Conversas com mensagens salvas' : 'Resposta imediata da IA'} color={{ bg: 'var(--surf-2)', fg: 'var(--mute)' }} />
+        <Stat icon={TrendingUp} label="Taxa de conversão" value={`${stats.taxa}%`} note={`${stats.convertidos} convertidos`} color={{ bg: 'var(--surf-2)', fg: 'var(--mute)' }} />
+        <Stat icon={DollarSign} label={real ? 'Valor convertido' : 'Receita gerada'} value={`R$ ${stats.receita}`} note={real ? 'Valor informado nos leads convertidos' : 'No período simulado'} color={{ bg: 'var(--surf-2)', fg: 'var(--mute)' }} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.3fr) minmax(0,1fr)', gap: 16, alignItems: 'start' }}>
@@ -149,7 +151,11 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gap: 16, minWidth: 0 }}>
+        {real ? <section className="card" style={{ padding: 22 }}>
+          <h2>Atividade registrada</h2>
+          {activity.length ? activity.map(event => <p key={event.id}>{event.text} · {event.time}</p>) : <p>Nenhuma atividade registrada.</p>}
+          <p>WhatsApp ainda não conectado.</p>
+        </section> : <div style={{ display: 'grid', gap: 16, minWidth: 0 }}>
           <div className="card" style={{ padding: 22, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <Building2 size={18} color="var(--acc)" />
@@ -205,11 +211,11 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
-            <div style={{ marginTop: 20, padding: 14, background: 'var(--bg-alt)', borderRadius: 10, fontSize: 14, color: 'var(--mute)' }}>
+            <div style={{ marginTop: 20, padding: 14, background: 'var(--bg-alt)', borderRadius: 8, fontSize: 14, color: 'var(--mute)' }}>
               <strong style={{ color: 'var(--ink)' }}>Dica:</strong> use o tour guiado e os cenários prontos para apresentar o app ao vivo.
             </div>
           </div>
-        </div>
+        </div>}
       </div>
 
       {summary && <ExecutiveSummary onClose={() => setSummary(false)} />}

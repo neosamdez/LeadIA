@@ -1,20 +1,18 @@
-const NVIDIA_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
+import { agentPrompt, parseAgentJson } from '../lib/agentPresets.js';
+import { supabase } from '../lib/supabase';
 
-export function getNvidiaApiKey(settings) {
-  return (settings?.nvidiaApiKey || import.meta.env.VITE_NVIDIA_API_KEY || '').trim();
-}
+// A IA roda no servidor (deploy/whatsapp/ai.mjs, exposto pelo nginx). Nenhuma chave passa pelo navegador.
+const AI_ENDPOINT = '/ai/v1/complete';
 
-export function getNvidiaModel(settings) {
-  return (settings?.nvidiaModel || import.meta.env.VITE_NVIDIA_MODEL || 'nvidia/nemotron-3.5-lightning-30b-a3b').trim();
-}
+const AI_ERRORS = {
+  401: 'Sessão expirada. Entre novamente para usar a IA.',
+  429: 'Muitas solicitações de IA em pouco tempo. Aguarde um minuto.',
+  503: 'A IA ainda não está configurada no servidor.',
+};
 
-export function getNvidiaUrl(settings) {
-  const proxy = (settings?.nvidiaProxyUrl || import.meta.env.VITE_NVIDIA_PROXY_URL || '').trim();
-  return proxy || NVIDIA_URL;
-}
-
+/** IA disponível: há backend (Supabase) e a opção está ligada em Configurações. */
 export function isNvidiaConfigured(settings) {
-  return !!getNvidiaApiKey(settings) && !!settings?.useNvidiaApi;
+  return !!supabase && !!settings?.useNvidiaApi;
 }
 
 const PLAYBOOKS = {
@@ -51,48 +49,42 @@ function toChatMessages(conversations, lead, settings, playbook) {
   return messages;
 }
 
-async function callNvidia(messages, settings, signal, maxTokens = 220) {
-  const apiKey = getNvidiaApiKey(settings);
-  const model = getNvidiaModel(settings);
-  if (!apiKey) throw new Error('Chave da API NVIDIA não configurada.');
+/** Envia o chat ao backend com o token da sessão. `system` vai separado, como o servidor espera. */
+async function callAi(messages, signal, maxTokens = 220, responseFormat) {
+  if (!supabase) throw new Error('IA indisponível no modo demonstração.');
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData?.session?.access_token;
+  if (!token) throw new Error(AI_ERRORS[401]);
+
+  const system = messages.filter(m => m.role === 'system').map(m => m.content).join('\n');
+  const chat = messages.filter(m => m.role !== 'system').map(({ role, content }) => ({ role, content }));
+  if (!chat.length) {
+    chat.push({ role: 'user', content: 'Gere a primeira mensagem da conversa com base no contexto.' });
+  }
 
   let res;
   try {
-    res = await fetch(getNvidiaUrl(settings), {
+    res = await fetch(AI_ENDPOINT, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages,
-        temperature: 0.8,
-        top_p: 0.95,
-        max_tokens: maxTokens,
-        chat_template_kwargs: { enable_thinking: false },
-      }),
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ system, messages: chat, maxTokens, responseFormat }),
       signal,
     });
   } catch (err) {
     if (err?.name === 'AbortError') throw err;
-    throw new Error('Falha de rede/CORS ao chamar NVIDIA API. Verifique a chave, modelo e conexão.');
+    throw new Error('Não foi possível falar com a IA agora. Tente de novo em instantes.');
   }
 
-  if (!res.ok) {
-    let detail = '';
-    try { const err = await res.json(); detail = err?.detail || err?.error?.message || JSON.stringify(err); } catch {}
-    throw new Error(`Erro NVIDIA (${res.status})${detail ? ': ' + detail : ''}`);
-  }
+  if (!res.ok) throw new Error(AI_ERRORS[res.status] || `Erro ao gerar com IA (${res.status}).`);
 
-  const data = await res.json();
-  const text = data?.choices?.[0]?.message?.content?.trim();
-  if (!text) throw new Error('Resposta vazia da API NVIDIA.');
-  return text.replace(/^["']|["']$/g, '').trim();
+  const body = await res.json();
+  const text = String(body?.text ?? '').trim();
+  if (!text) throw new Error('A IA não devolveu texto.');
+  return text;
 }
 
 export async function generateNvidiaReply({ lead, conversations, settings, signal, playbook }) {
-  return callNvidia(toChatMessages(conversations, lead, settings, playbook), settings, signal, 220);
+  return callAi(toChatMessages(conversations, lead, settings, playbook), signal, 220);
 }
 
 export { PLAYBOOKS };
@@ -110,5 +102,12 @@ export async function generateNvidiaClientMessage({ lead, conversations, setting
     `Regras: escreva em português do Brasil, tom natural de WhatsApp/Instagram (curto, humano, pode ter pequenas variações), sem ser robótico.`,
     `Não use prefixos como "Cliente:". Não faça papel de vendedor. Apenas a mensagem do cliente.`,
   ].join(' ');
-  return callNvidia([{ role: 'system', content: system }, ...history], settings, signal, 120);
+  return callAi([{ role: 'system', content: system }, ...history], signal, 120);
+}
+
+// Gera a configuração do agente a partir do objetivo e do contexto do negócio.
+// Devolve só campos de comportamento já validados; quem chama decide aplicar no rascunho.
+export async function generateAgentConfig({ objective, description, context, settings, signal }) {
+  const text = await callAi(agentPrompt(objective, description, context), signal, 3000, 'agent_config');
+  return parseAgentJson(text);
 }

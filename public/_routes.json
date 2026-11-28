@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "include": ["/ai/v1/complete", "/whatsapp/v1/*"],
+  "exclude": []
+}

@@ -1,5 +1,13 @@
 import { requireSupabase } from '../lib/supabase';
 
+export async function appendMessage(leadId, message) {
+  const { data, error } = await requireSupabase().rpc('append_message', {
+    p_lead_id: leadId, p_sender: message.from || 'consultor', p_content: message.text,
+  }).single();
+  if (error) throw error;
+  return data;
+}
+
 export async function listConversations(orgId) {
   const sb = requireSupabase();
   const { data, error } = await sb
@@ -40,6 +48,12 @@ export async function addMessage(orgId, { conversationId, leadId, sender, conten
     .insert({ org_id: orgId, conversation_id: conversationId, lead_id: leadId, sender, content, meta })
     .select()
     .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function setWhatsAppPause(leadId, paused) {
+  const { data, error } = await requireSupabase().rpc('set_whatsapp_pause', { p_lead: leadId, p_pause: paused });
   if (error) throw error;
   return data;
 }

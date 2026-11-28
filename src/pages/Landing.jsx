@@ -226,10 +226,10 @@ export default function Landing() {
               <h2>Pronto para ver a LeadIA em ação?</h2>
               <p>Entre na lista de acesso antecipado ou abra o painel demo para explorar o fluxo comercial completo.</p>
               <form onSubmit={submit} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 20 }}>
-                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com.br" aria-label="Seu e-mail" style={{ flex: '1 1 240px', border: '1px solid var(--line-strong)', background: 'rgba(255,255,255,0.04)', color: 'var(--ink)' }} />
+                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com.br" aria-label="Seu e-mail" style={{ flex: '1 1 240px', border: '1px solid var(--line-strong)', background: '#F5F5F4', color: 'var(--ink)' }} />
                 <button className="btn btn-primary" type="submit">Entrar na lista</button>
               </form>
-              {ok && <div style={{ marginTop: 12, color: '#4CD08A', fontWeight: 600, display: 'flex', gap: 8, alignItems: 'center' }}><CheckCircle2 size={16} /> {ok}</div>}
+              {ok && <div style={{ marginTop: 12, color: '#15803D', fontWeight: 600, display: 'flex', gap: 8, alignItems: 'center' }}><CheckCircle2 size={16} /> {ok}</div>}
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <Link className="btn btn-primary" to="/login">Abrir demo <ArrowRight size={16} /></Link>
@@ -242,6 +242,10 @@ export default function Landing() {
         <footer className="l-footer">
           <span>LeadIA · Plataforma inteligente de captação, atendimento e conversão de leads com Inteligência Artificial.</span>
           <span>Projeto acadêmico · Demonstração funcional</span>
+          <nav className="privacy-footer-links" aria-label="Privacidade">
+            <Link to="/privacidade">Privacidade</Link>
+            <Link to="/exclusao-de-dados">Exclusão de dados</Link>
+          </nav>
         </footer>
       </div>
     </div>
