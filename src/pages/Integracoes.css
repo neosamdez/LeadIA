@@ -1,4 +1,19 @@
 .integracoes { display: grid; gap: 16px; }
+.wa-connect { min-width: 0; }
+.wa-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.wa-heading > div { display: grid; gap: 5px; }
+.wa-state { display: inline-flex; align-items: center; gap: 7px; padding: 5px 10px; border-radius: 999px; background: var(--surf-2); color: var(--mute); white-space: nowrap; font-size: 12px; }
+.wa-state i { width: 7px; height: 7px; border-radius: 50%; background: var(--mute); }
+.wa-state.is-on { color: var(--success, #23845b); }
+.wa-state.is-on i { background: currentColor; }
+.wa-qr-area { display: flex; align-items: center; gap: 20px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surf-2); }
+.wa-qr { display: block; width: min(220px, 48vw); aspect-ratio: 1; object-fit: contain; padding: 8px; border-radius: 8px; background: #fff; }
+.wa-qr-area > div { display: grid; gap: 8px; }
+.wa-qr-area ol { margin: 0; padding-left: 20px; color: var(--mute); font-size: 13px; line-height: 1.7; }
+.wa-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.wa-spin { animation: wa-spin 1s linear infinite; }
+@keyframes wa-spin { to { transform: rotate(360deg); } }
+@media (max-width: 560px) { .wa-heading { flex-direction: column; } .wa-qr-area { flex-direction: column; align-items: flex-start; } .wa-qr { width: min(240px, 100%); align-self: center; } }
 .in-note { margin: 0; padding: 12px 14px; border: 1px solid var(--line); border-left: 3px solid var(--warn); border-radius: 8px; background: var(--surf); font-size: 13.5px; color: var(--mute); line-height: 1.5; }
 .in-note strong { color: var(--ink); font-weight: 600; }
 .in-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(300px, 1fr); gap: 16px; align-items: start; }

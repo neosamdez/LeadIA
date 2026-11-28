@@ -3,10 +3,12 @@ import { createServer } from 'node:http';
 import { pathToFileURL } from 'node:url';
 import { createRpc, runWorker } from './worker.mjs';
 import { createAiHandler } from './ai.mjs';
+import { createWhatsappHandler } from './whatsapp-connect.mjs';
 
 const endpoint = '/webhooks/whatsapp';
 const evolutionEndpoint = '/webhooks/evolution';
 const aiEndpoint = '/ai/v1/complete';
+const whatsappApiEndpoint = '/whatsapp/v1/';
 const maxBodyBytes = 1024 * 1024;
 const phone = /^[1-9][0-9]{6,14}$/;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -24,11 +26,11 @@ function reply(response, status, body = '') {
 }
 
 export function createWebhook({ verifyToken, appSecret, phoneNumberId, recipients, rpc, ai, whatsappEnabled = true,
-  evolutionEnabled = false, evolutionWebhookToken, log = console.log }) {
+  evolutionEnabled = false, evolutionWebhookToken, whatsappConnect, evolutionRpc = rpc, log = console.log }) {
   if (whatsappEnabled && (!verifyToken || !appSecret || !phoneNumberId || !recipients?.size || !rpc)) {
     throw new Error('WhatsApp test configuration is incomplete');
   }
-  if (evolutionEnabled && (!evolutionWebhookToken || !rpc)) {
+  if (evolutionEnabled && !rpc && !evolutionRpc) {
     throw new Error('Evolution webhook configuration is incomplete');
   }
 
@@ -41,12 +43,18 @@ export function createWebhook({ verifyToken, appSecret, phoneNumberId, recipient
     if (url.pathname === aiEndpoint) {
       return ai ? ai(request, response) : reply(response, 404);
     }
+    if (url.pathname.startsWith(whatsappApiEndpoint)) {
+      return whatsappConnect ? whatsappConnect(request, response) : reply(response, 404);
+    }
     if (evolutionEnabled && url.pathname === evolutionEndpoint) {
       if (request.method !== 'POST') {
         response.setHeader('Allow', 'POST');
         return reply(response, 405);
       }
-      if (!matches('Bearer ' + evolutionWebhookToken, request.headers.authorization)) {
+      const legacyAuth = Boolean(evolutionWebhookToken)
+        && matches('Bearer ' + evolutionWebhookToken, request.headers.authorization);
+      const webhookToken = /^Bearer (.{32,128})$/.exec(request.headers.authorization ?? '')?.[1];
+      if (!legacyAuth && !webhookToken) {
         log(JSON.stringify({ event: 'evolution_webhook_rejected', reason: 'invalid_auth', status: 403 }));
         return reply(response, 403);
       }
@@ -83,27 +91,24 @@ export function createWebhook({ verifyToken, appSecret, phoneNumberId, recipient
             && content.trim() && content.length <= 10000 && Number.isFinite(timestamp) && timestamp > 0) {
             const name = typeof data.pushName === 'string' ? data.pushName.slice(0, 160) : null;
             const id = `evolution:${instance}:${providerId}`;
-            const result = await rpc('whatsapp_ingest', {
-              p_phone_id: instance, p_from: from, p_name: name, p_message_id: id,
-              p_content: content.trim(), p_received_at: new Date(timestamp * 1000).toISOString(),
-            });
+            const result = legacyAuth
+              ? await rpc('whatsapp_ingest', { p_phone_id: instance, p_from: from, p_name: name,
+                p_message_id: id, p_content: content.trim(), p_received_at: new Date(timestamp * 1000).toISOString() })
+              : await evolutionRpc('whatsapp_ingest_evolution', { p_instance: instance, p_webhook_token: webhookToken,
+                p_from: from, p_name: name, p_message_id: id, p_content: content.trim(),
+                p_received_at: new Date(timestamp * 1000).toISOString() });
             log(JSON.stringify({ event: 'evolution_inbound', id: id.slice(-8), result }));
           }
-        } else if (event === 'MESSAGES_UPDATE') {
+        } else if (legacyAuth && event === 'MESSAGES_UPDATE') {
           const updates = Array.isArray(payload.data) ? payload.data : [payload.data];
-          const states = new Map([
-            ['SERVER_ACK', 'sent'], ['DELIVERY_ACK', 'delivered'], ['READ', 'read'],
-            ['PLAYED', 'read'], ['ERROR', 'failed'], ['1', 'sent'], ['2', 'delivered'],
-            ['3', 'read'], ['4', 'read'], ['5', 'failed'],
-          ]);
+          const states = new Map([['SERVER_ACK', 'sent'], ['DELIVERY_ACK', 'delivered'], ['READ', 'read'],
+            ['PLAYED', 'read'], ['ERROR', 'failed'], ['1', 'sent'], ['2', 'delivered'], ['3', 'read'], ['4', 'read'], ['5', 'failed']]);
           for (const update of updates) {
             const providerId = update?.key?.id;
             const delivery = states.get(String(update?.update?.status ?? update?.status ?? '').toUpperCase());
             if (!delivery || typeof providerId !== 'string' || !providerId || providerId.length > 400) continue;
             const id = `evolution:${instance}:${providerId}`;
-            if (await rpc('whatsapp_finish', { p_job: null, p_delivery: delivery, p_outbound_id: id })) {
-              log(JSON.stringify({ event: 'evolution_delivery', id: id.slice(-8), result: delivery }));
-            }
+            await rpc('whatsapp_finish', { p_job: null, p_delivery: delivery, p_outbound_id: id });
           }
         }
         log(JSON.stringify({ event: 'evolution_webhook_processed', status: 200 }));
@@ -201,6 +206,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     evolutionEnabled: process.env.WHATSAPP_EVOLUTION_ENABLED === 'true',
     evolutionApiUrl: process.env.EVOLUTION_API_URL?.replace(/\/$/, ''),
     evolutionApiKey: process.env.EVOLUTION_API_KEY,
+    evolutionWebhookUrl: process.env.EVOLUTION_WEBHOOK_URL,
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
     evolutionWebhookToken: process.env.EVOLUTION_WEBHOOK_TOKEN,
     apiKey: process.env.SUPABASE_PUBLISHABLE_KEY,
     verifyToken: process.env.WHATSAPP_VERIFY_TOKEN,
@@ -209,7 +216,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     recipients: new Set((process.env.WHATSAPP_TEST_RECIPIENTS ?? '').split(',').map(value => value.trim()).filter(Boolean)),
     graphVersion: process.env.META_GRAPH_VERSION,
     accessToken: process.env.WHATSAPP_ACCESS_TOKEN,
-    crmUrl: process.env.WHATSAPP_CRM_URL?.replace(/\/$/, ''),
+    crmUrl: (process.env.WHATSAPP_CRM_URL || process.env.AI_AUTH_URL?.replace(/\/auth\/v1\/?$/, ''))?.replace(/\/$/, ''),
     crmToken: process.env.WHATSAPP_CRM_TOKEN,
     claudeKey: process.env.ANTHROPIC_API_KEY,
     claudeModel: process.env.CLAUDE_MODEL,
@@ -229,13 +236,25 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     evolutionUrlAllowed = evolutionUrl.protocol === 'https:'
       || (evolutionUrl.protocol === 'http:' && evolutionUrl.hostname === 'leadia-evolution-api');
   } catch {}
-  if (config.evolutionEnabled && (!evolutionUrlAllowed || !config.evolutionApiKey || !config.evolutionWebhookToken)) {
+  const legacyEvolution = Boolean(config.evolutionWebhookToken && config.crmToken);
+  if (config.evolutionEnabled && (!evolutionUrlAllowed || !config.evolutionApiKey
+    || (!legacyEvolution && (!/^https:\/\//.test(config.evolutionWebhookUrl ?? '') || !config.serviceRoleKey)))) {
     throw new Error('Evolution API configuration is incomplete');
   }
-  const workerEnabled = config.whatsappEnabled || config.evolutionEnabled;
+  const workerEnabled = config.whatsappEnabled || (config.evolutionEnabled && Boolean(config.crmToken));
   const rpc = workerEnabled ? createRpc(config) : null;
+  const evolutionRpc = config.evolutionEnabled && config.serviceRoleKey ? async (name, args) => {
+    const response = await fetch(config.crmUrl + '/rest/v1/rpc/' + name, {
+      method: 'POST', headers: { Authorization: `Bearer ${config.serviceRoleKey}`, apikey: config.serviceRoleKey,
+        'Content-Type': 'application/json' }, body: JSON.stringify(args), signal: AbortSignal.timeout(8000),
+    });
+    if (!response.ok) throw new Error(`database_${response.status}`);
+    return response.json();
+  } : null;
   const ai = createAiHandler(config);
-  const server = createWebhook({ ...config, rpc, ai });
+  const whatsappConnect = config.evolutionEnabled && config.serviceRoleKey && config.evolutionWebhookUrl
+    ? createWhatsappHandler(config) : null;
+  const server = createWebhook({ ...config, rpc, evolutionRpc, ai, whatsappConnect });
   const stop = new AbortController();
   for (const signal of ['SIGTERM', 'SIGINT']) {
     process.once(signal, () => { stop.abort(); server.close(); });
