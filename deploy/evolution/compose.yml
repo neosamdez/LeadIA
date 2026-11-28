@@ -1,0 +1,79 @@
+services:
+  evolution-api:
+    image: evoapicloud/evolution-api:v2.3.8
+    restart: unless-stopped
+    depends_on:
+      evolution-postgres:
+        condition: service_healthy
+      evolution-redis:
+        condition: service_started
+    expose:
+      - "8080"
+    volumes:
+      - evolution_instances:/evolution/instances
+    environment:
+      SERVER_URL: ${EVOLUTION_SERVER_URL:?required}
+      DEL_INSTANCE: "false"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: ${EVOLUTION_DATABASE_CONNECTION_URI:?required}
+      DATABASE_CONNECTION_CLIENT_NAME: leadia_evolution
+      DATABASE_SAVE_DATA_INSTANCE: "true"
+      DATABASE_SAVE_DATA_NEW_MESSAGE: "false"
+      DATABASE_SAVE_MESSAGE_UPDATE: "false"
+      DATABASE_SAVE_DATA_CONTACTS: "false"
+      DATABASE_SAVE_DATA_CHATS: "false"
+      DATABASE_SAVE_DATA_LABELS: "false"
+      DATABASE_SAVE_DATA_HISTORIC: "false"
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://evolution-redis:6379/1
+      CACHE_REDIS_PREFIX_KEY: leadia_evolution
+      CACHE_REDIS_SAVE_INSTANCES: "false"
+      CACHE_LOCAL_ENABLED: "false"
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:?required}
+      AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "false"
+      LANGUAGE: pt-BR
+    networks:
+      evolution-private:
+      dokploy-network:
+        aliases: [leadia-evolution-api]
+    mem_limit: 768m
+    cpus: 1
+
+  evolution-postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${EVOLUTION_POSTGRES_DB:-evolution}
+      POSTGRES_USER: ${EVOLUTION_POSTGRES_USER:-evolution}
+      POSTGRES_PASSWORD: ${EVOLUTION_POSTGRES_PASSWORD:?required}
+    volumes:
+      - evolution_postgres:/var/lib/postgresql/data
+    networks:
+      - evolution-private
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 512m
+
+  evolution-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - evolution_redis:/data
+    networks:
+      - evolution-private
+    mem_limit: 128m
+
+volumes:
+  evolution_instances:
+  evolution_postgres:
+  evolution_redis:
+
+networks:
+  evolution-private:
+    driver: bridge
+  dokploy-network:
+    external: true

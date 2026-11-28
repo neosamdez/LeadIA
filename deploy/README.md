@@ -34,7 +34,7 @@ o endpoint de IA aceitar qualquer sessão válida do projeto.
 
 1. Em um banco Supabase novo, aplique `supabase/schema.sql` e depois
    `supabase/migrations/001_whatsapp.sql` até
-   `005_ad_integrations.sql` em ordem. Configure a URL do app nas opções
+   `005_ad_integrations.sql` e `006_evolution_whatsapp.sql` em ordem. Configure a URL do app nas opções
    de Auth e convide um usuário de ensaio quando ela estiver disponível.
 2. No Render, use o Blueprint `render.yaml` para criar o serviço Free.
    Configure `AI_AUTH_URL=https://<projeto>.supabase.co/auth/v1`,

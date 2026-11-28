@@ -13,6 +13,8 @@ insert into public.memberships (org_id,user_id,role) values
 insert into whatsapp_private.channels (id,org_id,phone_number_id,recipients,enabled) values
  ('00000000-0000-4000-8000-000000000031','00000000-0000-4000-8000-000000000021','101',array['15550000101'],true),
  ('00000000-0000-4000-8000-000000000032','00000000-0000-4000-8000-000000000022','102',array['15550000101'],true);
+insert into whatsapp_private.channels (id,org_id,phone_number_id,recipients,enabled,provider,evolution_instance) values
+ ('00000000-0000-4000-8000-000000000033','00000000-0000-4000-8000-000000000021',null,array['15550000103'],true,'evolution','leadia-test');
 
 set local role leadia_whatsapp;
 select set_config('request.jwt.claims','{"channel_id":"00000000-0000-4000-8000-000000000031"}',true);
@@ -86,6 +88,7 @@ begin
   if has_function_privilege('anon','public.whatsapp_claim()','execute')
     or has_function_privilege('authenticated','public.whatsapp_claim()','execute')
     or has_function_privilege('authenticated','public.whatsapp_ingest(text,text,text,text,text,timestamptz)','execute')
+    or has_function_privilege('authenticated','public.whatsapp_claim_provider(text)','execute')
     or has_function_privilege('leadia_whatsapp','public.set_whatsapp_pause(uuid,boolean)','execute')
     then raise exception 'Unexpected function grants'; end if;
 end $$;
@@ -114,5 +117,23 @@ begin
   if exists (select 1 from public.whatsapp_claim()) then raise exception 'Expired message queued'; end if;
   perform public.whatsapp_ingest('101','15550000101','QA','resumed','Oi, voltei',now());
   if not exists (select 1 from public.whatsapp_claim() where content = 'Oi, voltei') then raise exception 'Resume failed'; end if;
+end $$;
+select set_config('request.jwt.claims','{"channel_id":"00000000-0000-4000-8000-000000000033"}',true);
+do $$
+declare task record;
+begin
+  if public.whatsapp_ingest('101','15550000103','QA','wrong-provider','Ignorar',now()) <> 'ignored'
+    or public.whatsapp_ingest('leadia-test','15550000101','QA','wrong-recipient','Ignorar',now()) <> 'ignored'
+    or public.whatsapp_ingest('leadia-test','15550000103','QA','evolution-in','Oi pela Evolution',now()) <> 'stored'
+    then raise exception 'Evolution channel isolation or ingest failed'; end if;
+  if exists (select 1 from public.whatsapp_claim())
+    or exists (select 1 from public.whatsapp_claim_provider('meta')) then
+    raise exception 'Evolution job claimed by Meta worker'; end if;
+  select * into strict task from public.whatsapp_claim_provider('evolution');
+  if task.provider <> 'evolution' or task.evolution_instance <> 'leadia-test' or task.phone_number_id is not null
+    or task.content <> 'Oi pela Evolution' then raise exception 'Evolution job metadata missing'; end if;
+  if not public.whatsapp_prepare(task.id,task.lease_id,'Oi!', 'interest',null,'rules')
+    or not public.whatsapp_finish(task.id,'accepted','evolution:leadia-test:evolution-out',task.lease_id)
+    then raise exception 'Evolution worker lifecycle failed'; end if;
 end $$;
 rollback;
