@@ -70,7 +70,8 @@ services:
       - ../../supabase/migrations/003_org_context.sql:/migrations/003_org_context.sql:ro
       - ../../supabase/migrations/004_agents.sql:/migrations/004_agents.sql:ro
       - ../../supabase/migrations/005_ad_integrations.sql:/migrations/005_ad_integrations.sql:ro
-    command: [psql, -v, ON_ERROR_STOP=1, -f, /migrations/schema.sql, -f, /migrations/001_whatsapp.sql, -f, /migrations/002_lead_assignment.sql, -f, /migrations/003_org_context.sql, -f, /migrations/004_agents.sql, -f, /migrations/005_ad_integrations.sql]
+      - ../../supabase/migrations/006_evolution_whatsapp.sql:/migrations/006_evolution_whatsapp.sql:ro
+    command: [psql, -v, ON_ERROR_STOP=1, -f, /migrations/schema.sql, -f, /migrations/001_whatsapp.sql, -f, /migrations/002_lead_assignment.sql, -f, /migrations/003_org_context.sql, -f, /migrations/004_agents.sql, -f, /migrations/005_ad_integrations.sql, -f, /migrations/006_evolution_whatsapp.sql]
     networks: [private]
     mem_limit: 128m
 

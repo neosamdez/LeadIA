@@ -87,7 +87,12 @@ export function createRpc({ crmUrl, crmToken, apiKey, fetch: request = fetch }) 
   };
 }
 
-export async function deliver(job, reply, { phoneNumberId, graphVersion, accessToken, fetch: request = fetch }) {
+export async function deliver(job, reply, config) {
+  if (job.provider === 'evolution') return deliverEvolution(job, reply, config);
+  return deliverMeta(job, reply, config);
+}
+
+async function deliverMeta(job, reply, { phoneNumberId, graphVersion, accessToken, fetch: request = fetch }) {
   try {
     const response = await request('https://graph.facebook.com/' + graphVersion + '/' + phoneNumberId + '/messages', {
       method: 'POST',
@@ -113,8 +118,31 @@ export async function deliver(job, reply, { phoneNumberId, graphVersion, accessT
   }
 }
 
+export async function deliverEvolution(job, reply, { evolutionApiUrl, evolutionApiKey, fetch: request = fetch }) {
+  const instance = job.evolution_instance;
+  if (!evolutionApiUrl || !evolutionApiKey || !instance) return { delivery: 'failed' };
+  try {
+    const response = await request(`${evolutionApiUrl.replace(/\/$/, '')}/message/sendText/${encodeURIComponent(instance)}`, {
+      method: 'POST',
+      headers: { apikey: evolutionApiKey, 'content-type': 'application/json' },
+      signal: AbortSignal.timeout(8000),
+      body: JSON.stringify({ number: job.recipient, text: reply }),
+    });
+    if (response.status >= 400 && response.status < 500) return { delivery: 'failed' };
+    if (!response.ok) return { delivery: 'uncertain' };
+    const payload = await response.json();
+    const providerId = payload.key?.id;
+    const id = typeof providerId === 'string' && providerId.length > 0
+      ? `evolution:${instance}:${providerId}` : '';
+    return id && id.length <= 512 ? { delivery: 'accepted', id } : { delivery: 'uncertain' };
+  } catch {
+    return { delivery: 'uncertain' };
+  }
+}
+
 export async function workOnce(rpc, config, log = console.log) {
-  const [job] = await rpc('whatsapp_claim');
+  const provider = config.evolutionEnabled && !config.whatsappEnabled ? 'evolution' : 'meta';
+  const [job] = await rpc('whatsapp_claim_provider', { p_provider: provider });
   if (!job) return false;
   const decision = await decide(job.content, config);
   const prepared = await rpc('whatsapp_prepare', {

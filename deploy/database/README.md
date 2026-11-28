@@ -56,6 +56,11 @@ Para os agentes, o Compose aplica a migração 004_agents.sql. Ela cria agents (
 
 Para as integrações de anúncios, o Compose aplica a migração 005_ad_integrations.sql. Ela cria ad_integrations com os identificadores públicos de Meta Ads, Pixel, Google Ads, GA4, GTM e TikTok, validados no banco. Não guarda tokens nem segredos. Pelo app, owner ou admin só cadastram (status aguardando credenciais) ou desligam; marcar como conectado ou registrar erro fica para o servidor de OAuth, que ainda depende das credenciais de app de cada plataforma.
 
+O Compose também aplica `006_evolution_whatsapp.sql`. Ela adiciona `provider` e
+`evolution_instance` aos canais sem alterar as linhas Meta existentes, permite
+instâncias Evolution com destinatários autorizados e cria a RPC de claim
+filtrada por provedor. O adaptador Evolution recebe um JWT exclusivo de canal.
+
 ## Validação de SQL
 
 Usar somente PostgreSQL descartável, banco terminado em `_test`:
